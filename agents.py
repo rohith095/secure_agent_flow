@@ -3,10 +3,15 @@ Agents definition for the secure agent flow crew.
 """
 
 from crewai import Agent
+from config import Config
 
 
 class SecureAgentFlowAgents:
     """Class containing all agents for the secure agent flow crew."""
+
+    def __init__(self):
+        """Initialize the agents class with Bedrock LLM."""
+        self.llm = Config.get_bedrock_llm()
 
     def roles_and_details_fetcher_agent(self):
         """
@@ -20,7 +25,8 @@ class SecureAgentFlowAgents:
             and configurations to extract detailed information about user roles, their permissions, 
             and access patterns.""",
             verbose=True,
-            allow_delegation=False
+            allow_delegation=False,
+            llm=self.llm
         )
 
     def mapping_agent(self):
@@ -35,21 +41,23 @@ class SecureAgentFlowAgents:
             mappings of complex permission structures, identifying overlaps, conflicts, and gaps 
             in access control systems.""",
             verbose=True,
-            allow_delegation=False
+            allow_delegation=False,
+            llm=self.llm
         )
 
     def prepare_agent(self):
         """
-        Agent responsible for preparing and organizing data for policy creation.
+        Agent responsible for preparing and structuring data for policy creation.
         """
         return Agent(
-            role="Prepare Agent",
-            goal="Structure, validate, and organize mapped role and permission data for optimal policy creation",
-            backstory="""You are a data preparation specialist with expertise in security policy 
-            frameworks and governance structures. You excel at taking complex, mapped security data 
-            and organizing it into structured formats that enable effective policy creation.""",
+            role="Data Preparation Agent",
+            goal="Structure and prepare collected role and permission data for comprehensive policy creation",
+            backstory="""You are a data analyst with expertise in information architecture and 
+            policy documentation. You specialize in organizing complex access control data into 
+            structured formats that can be used for creating clear, actionable security policies.""",
             verbose=True,
-            allow_delegation=False
+            allow_delegation=False,
+            llm=self.llm
         )
 
     def policy_creator_agent(self):
@@ -57,12 +65,13 @@ class SecureAgentFlowAgents:
         Agent responsible for creating comprehensive security policies.
         """
         return Agent(
-            role="Policy Creator",
-            goal="Generate comprehensive, compliant, and implementable security policies based on structured role and permission data",
-            backstory="""You are a senior security policy architect with deep expertise in 
-            regulatory compliance, security frameworks (like NIST, ISO 27001, SOC 2), and 
-            enterprise governance. You specialize in translating technical access control 
-            requirements into clear, actionable policies.""",
+            role="Security Policy Creator",
+            goal="Generate comprehensive, compliant security policies based on organizational roles and requirements",
+            backstory="""You are a cybersecurity expert and policy architect with extensive 
+            experience in creating enterprise security policies. You understand compliance 
+            frameworks like SOX, GDPR, HIPAA, and can translate technical access controls 
+            into clear, actionable policies that meet regulatory requirements.""",
             verbose=True,
-            allow_delegation=False
+            allow_delegation=False,
+            llm=self.llm
         )

@@ -1,6 +1,6 @@
 """
 AWS Lambda handler for the secure agent flow application.
-This handler processes requests and runs the CrewAI workflow.
+This handler processes requests and runs the CrewAI workflow with AWS Bedrock.
 """
 
 import json

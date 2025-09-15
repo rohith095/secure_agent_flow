@@ -46,6 +46,24 @@ variable "openai_api_key" {
   sensitive   = true
 }
 
+variable "lambda_timeout" {
+  description = "Lambda function timeout in seconds"
+  type        = number
+  default     = 300
+}
+
+variable "lambda_memory_size" {
+  description = "Lambda function memory size in MB"
+  type        = number
+  default     = 1024
+}
+
+variable "bedrock_model" {
+  description = "Bedrock model ID for the agent"
+  type        = string
+  default     = "anthropic.claude-3-sonnet-20240229-v1:0"
+}
+
 # Create deployment package
 data "archive_file" "lambda_zip" {
   type        = "zip"
@@ -149,15 +167,15 @@ resource "aws_lambda_function" "secure_agent_flow" {
   handler         = "lambda_handler.bedrock_agent_handler"
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
   runtime         = "python3.11"
-  timeout         = 300
-  memory_size     = 1024
+  timeout         = var.lambda_timeout
+  memory_size     = var.lambda_memory_size
 
   layers = [aws_lambda_layer_version.dependencies.arn]
 
   environment {
     variables = {
-      OPENAI_API_KEY = var.openai_api_key
-      OPENAI_MODEL   = "gpt-4"
+      AWS_REGION     = var.aws_region
+      BEDROCK_MODEL_ID = var.bedrock_model
       ENVIRONMENT    = var.environment
     }
   }

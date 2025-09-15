@@ -32,7 +32,8 @@ botocore>=1.34.0
 requests>=2.31.0
 PyYAML>=6.0
 langchain>=0.1.0
-langchain-openai>=0.1.0
+langchain-aws>=0.1.0
+langchain-community>=0.1.0
 EOF
 
 # Install dependencies using uv

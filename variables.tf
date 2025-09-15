@@ -33,12 +33,6 @@ variable "environment" {
   }
 }
 
-variable "openai_api_key" {
-  description = "OpenAI API Key for the CrewAI agents"
-  type        = string
-  sensitive   = true
-}
-
 variable "lambda_timeout" {
   description = "Timeout for Lambda function in seconds"
   type        = number
