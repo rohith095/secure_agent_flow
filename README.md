@@ -1,168 +1,342 @@
-# Secure Agent Flow
+# Secure Agent Flow - AWS Bedrock Agent Deployment
 
-A CrewAI-based multi-agent workflow for role analysis and security policy creation. This system uses 4 specialized agents to analyze roles, map permissions, prepare data, and create comprehensive security policies.
+A comprehensive secure agent flow application built with CrewAI and deployed to AWS Bedrock Agent for policy and role management automation.
 
-## 🤖 Agents Overview
+## 🏗️ Architecture
 
-### 1. Roles and Details Fetcher Agent
-- **Purpose**: Extracts role definitions, permissions, and access details from various sources
-- **Expertise**: Identity and Access Management (IAM), RBAC systems, enterprise directories
-- **Output**: Comprehensive role inventory with detailed permissions matrix
+This project deploys a multi-agent system that:
+1. **Roles Fetcher Agent** - Analyzes organizational roles and access details
+2. **Mapping Agent** - Maps roles to appropriate permissions and access levels  
+3. **Preparer Agent** - Structures data for policy creation
+4. **Policy Creator Agent** - Generates comprehensive security policies
 
-### 2. Mapping Agent
-- **Purpose**: Creates relationship mappings between roles, permissions, and resources
-- **Expertise**: Systems analysis, access control mapping, relationship modeling
-- **Output**: Visual mappings, conflict identification, gap analysis
-
-### 3. Prepare Agent
-- **Purpose**: Structures and validates mapped data for policy creation
-- **Expertise**: Data preparation, security frameworks, governance structures
-- **Output**: Organized, validated datasets ready for policy generation
-
-### 4. Policy Creator Agent
-- **Purpose**: Generates comprehensive, compliant security policies
-- **Expertise**: Security policy architecture, regulatory compliance, governance
-- **Output**: Complete policy suite with implementation guidelines
+The system is deployed as:
+- **AWS Lambda Function** - Runs the CrewAI workflow
+- **AWS Bedrock Agent** - Provides conversational interface
+- **S3 Bucket** - Stores API schemas
+- **CloudWatch** - Logging and monitoring
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.11+
-- OpenAI API key
-- (Optional) Serper API key for web search functionality
+
+1. **AWS CLI** configured with appropriate permissions
+2. **Terraform** >= 1.0
+3. **Python** 3.11+ 
+4. **uv** package manager (will be auto-installed if not present)
+5. **OpenAI API Key** for CrewAI agents
+
+### Required AWS Permissions
+
+Your AWS credentials need the following services:
+- AWS Lambda (create, update, invoke)
+- AWS Bedrock (create agents, invoke models)
+- IAM (create roles and policies)
+- S3 (create buckets, upload objects)
+- CloudWatch (create log groups)
 
 ### Installation
 
-1. Clone or set up the project directory
-2. Install dependencies:
-```bash
-pip install -e .
-```
+1. **Clone and navigate to the project:**
+   ```bash
+   git clone <your-repo>
+   cd secure_agent_flow
+   ```
 
-3. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your API keys
-```
+2. **Install uv (if not already installed):**
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   source $HOME/.cargo/env
+   ```
 
-### Basic Usage
+3. **Set up the development environment:**
+   ```bash
+   uv sync
+   ```
 
-Run the complete 4-agent workflow:
-```bash
-python main.py
-```
+4. **Configure your variables:**
+   ```bash
+   cp terraform.tfvars.example terraform.tfvars
+   # Edit terraform.tfvars with your values
+   ```
 
-Run individual agents for testing:
-```bash
-python main.py fetch    # Roles and Details Fetcher
-python main.py map      # Mapping Agent
-python main.py prepare  # Prepare Agent
-python main.py policy   # Policy Creator
-```
+5. **Set your OpenAI API key in terraform.tfvars:**
+   ```hcl
+   openai_api_key = "your-openai-api-key-here"
+   ```
+
+6. **Deploy the infrastructure:**
+   ```bash
+   chmod +x deploy.sh
+   ./deploy.sh
+   ```
 
 ## 📁 Project Structure
 
 ```
 secure_agent_flow/
-├── agents.py          # Agent definitions
-├── tasks.py           # Task definitions
-├── crew.py            # Main crew workflow
-├── main.py            # Entry point
-├── config.py          # Configuration settings
-├── utils.py           # Utility functions
-├── .env.example       # Environment variables template
-├── outputs/           # Generated outputs (created automatically)
-├── logs/              # Application logs (created automatically)
-└── pyproject.toml     # Project dependencies
+├── lambda_handler.py          # AWS Lambda handlers
+├── main.py                    # Local execution entry point
+├── crew.py                    # CrewAI workflow orchestration
+├── agents.py                  # Agent definitions
+├── tasks.py                   # Task definitions
+├── config.py                  # Configuration management
+├── utils.py                   # Utility functions
+├── pyproject.toml             # uv package configuration
+├── uv.lock                    # Dependency lock file
+├── main.tf                    # Main Terraform configuration
+├── variables.tf               # Terraform input variables
+├── outputs.tf                 # Terraform outputs
+├── terraform.tfvars.example   # Example configuration
+├── deploy.sh                  # Deployment script
+├── build_layer.sh            # Dependencies layer builder
+└── README.md                  # This file
+```
+
+## 🔧 Package Management with uv
+
+This project uses [uv](https://github.com/astral-sh/uv) for fast and reliable Python package management.
+
+### Common uv commands:
+
+```bash
+# Install dependencies
+uv sync
+
+# Add a new dependency
+uv add <package-name>
+
+# Add a development dependency
+uv add --dev <package-name>
+
+# Update dependencies
+uv sync --upgrade
+
+# Run scripts in the virtual environment
+uv run python main.py
+
+# Activate the virtual environment
+source .venv/bin/activate
+
+# Install specific versions
+uv add "crewai>=0.186.1"
+```
+
+### Development Setup:
+
+```bash
+# Install all dependencies including dev tools
+uv sync
+
+# Install with development dependencies
+uv sync --extra dev
+
+# Run tests
+uv run pytest
+
+# Run code formatting
+uv run black .
+
+# Run type checking
+uv run mypy .
 ```
 
 ## 🔧 Configuration
 
-The system supports various configuration options through environment variables and the `config.py` file:
+### Environment Variables
 
-- **OPENAI_API_KEY**: Required for agent operations
-- **OPENAI_MODEL**: Model to use (default: gpt-4)
-- **SERPER_API_KEY**: Optional for web search capabilities
-- **CREW_VERBOSE**: Enable detailed logging
-- **DEBUG**: Enable debug mode
+The following variables can be configured in `terraform.tfvars`:
 
-## 📊 Output Examples
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `aws_region` | AWS deployment region | `us-east-1` | No |
+| `project_name` | Project name prefix | `secure-agent-flow` | No |
+| `environment` | Environment (dev/staging/prod) | `dev` | No |
+| `openai_api_key` | OpenAI API key | - | **Yes** |
+| `lambda_timeout` | Lambda timeout in seconds | `300` | No |
+| `lambda_memory_size` | Lambda memory in MB | `1024` | No |
+| `bedrock_model` | Bedrock foundation model | `anthropic.claude-3-sonnet-20240229-v1:0` | No |
 
-The workflow generates several types of outputs:
+### Example terraform.tfvars:
+```hcl
+aws_region = "us-east-1"
+project_name = "secure-agent-flow"
+environment = "prod"
+openai_api_key = "sk-..."
+lambda_timeout = 300
+lambda_memory_size = 1024
+```
 
-1. **Role Analysis Report**: Detailed role inventory with permissions
-2. **Permission Mapping**: Visual relationships and conflict analysis
-3. **Structured Data**: Validated datasets for policy creation
-4. **Security Policies**: Complete policy documents with implementation guides
+## 🎯 Usage
 
-## 🛠 Customization
+### Via AWS Bedrock Agent Console
 
-### Adding New Agents
-1. Define the agent in `agents.py`
-2. Create corresponding tasks in `tasks.py`
-3. Update the crew workflow in `crew.py`
+1. Go to AWS Console → Amazon Bedrock → Agents
+2. Find your deployed agent
+3. Test with sample inputs:
 
-### Modifying Tasks
-Edit the task descriptions and expected outputs in `tasks.py` to match your specific requirements.
+```
+context: Enterprise application with 500 users, role-based access control, Active Directory integration
+policy: SOX compliance required, quarterly access reviews, principle of least privilege
+```
 
-### Policy Frameworks
-The system supports multiple compliance frameworks (NIST, ISO 27001, SOX, GDPR). Configure in `config.py`.
+### Local Development
 
-## 🔍 Advanced Usage
+```bash
+# Install dependencies
+uv sync
 
-### Custom Context Input
+# Set environment variables
+export OPENAI_API_KEY="your-key-here"
+
+# Run locally
+uv run python main.py
+
+# Or activate the environment and run directly
+source .venv/bin/activate
+python main.py
+```
+
+### Via Lambda Function (Direct)
+
 ```python
-from crew import SecureAgentFlowCrew
+import boto3
+import json
 
-crew = SecureAgentFlowCrew()
-result = crew.run_workflow(
-    context_input="Your system context here",
-    policy_requirements="Your policy requirements"
+lambda_client = boto3.client('lambda')
+
+payload = {
+    "context_input": "Enterprise system with multiple user roles...",
+    "policy_requirements": "SOX and GDPR compliance requirements..."
+}
+
+response = lambda_client.invoke(
+    FunctionName='secure-agent-flow-function-dev',
+    Payload=json.dumps(payload)
 )
 ```
 
-### Programmatic Access
-```python
-# Run individual tasks
-result = crew.run_individual_task("fetch", context_input="...")
+## 🔍 Monitoring
 
-# Access configuration
-from config import config
-status = config.validate_config()
+### CloudWatch Logs
+- Function logs: `/aws/lambda/secure-agent-flow-function-{env}`
+- Monitor execution time, memory usage, and errors
+
+### AWS X-Ray (Optional)
+- Enable tracing in Lambda configuration for detailed performance insights
+
+## 🚨 Troubleshooting
+
+### Common Issues
+
+1. **Import Errors in Lambda**
+   - Ensure all dependencies are in the layer
+   - Check build_layer.sh execution with uv
+   - Verify layer compatibility with Python runtime
+
+2. **uv Installation Issues**
+   - Install manually: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+   - Ensure PATH includes `~/.cargo/bin`
+   - Restart terminal after installation
+
+3. **Dependency Conflicts**
+   - Use `uv sync --upgrade` to update dependencies
+   - Check `uv.lock` for version conflicts
+   - Use `uv add --resolution highest` for latest versions
+
+4. **Bedrock Model Access**
+   - Ensure model access is enabled in Bedrock console
+   - Check IAM permissions for bedrock:InvokeModel
+
+### Debug Commands
+
+```bash
+# Check uv installation
+uv --version
+
+# Validate dependencies
+uv sync --dry-run
+
+# Check Terraform plan
+terraform plan
+
+# Test Lambda function
+aws lambda invoke --function-name secure-agent-flow-function-dev output.json
+
+# View logs
+aws logs tail /aws/lambda/secure-agent-flow-function-dev --follow
 ```
 
-## 📈 Monitoring and Logging
+## 🧪 Testing
 
-- Logs are automatically saved to the `logs/` directory
-- Outputs are timestamped and saved to the `outputs/` directory
-- Use the Rich console interface for enhanced terminal output
+### Unit Tests
+```bash
+# Run tests with uv
+uv run pytest
 
-## 🤝 Contributing
+# Run with coverage
+uv run pytest --cov=. --cov-report=html
 
-1. Follow the existing code structure
-2. Add type hints and docstrings
-3. Test individual agents before running the full workflow
-4. Update documentation for any new features
+# Test specific components
+uv run pytest tests/test_agents.py
+```
 
-## 📋 Dependencies
+### Integration Tests
+```bash
+# Test deployed Lambda function
+aws lambda invoke --function-name secure-agent-flow-function-dev \
+  --payload '{"context_input":"test","policy_requirements":"test"}' \
+  response.json
+```
 
-Core dependencies:
-- CrewAI: Multi-agent framework
-- CrewAI-tools: Additional agent tools
-- Rich: Enhanced terminal output
-- Pandas: Data manipulation
-- NetworkX: Graph analysis for role relationships
+## 🔄 Updates
 
-## ⚠️ Important Notes
+To update the deployment:
 
-- Ensure your OpenAI API key has sufficient credits
-- The workflow runs sequentially by default for data consistency
-- Large systems may require extended processing time
-- Review generated policies before implementation
+1. **Code Changes**:
+   ```bash
+   # Update dependencies if needed
+   uv sync
+   
+   # Redeploy
+   ./deploy.sh
+   ```
 
-## 🔒 Security Considerations
+2. **Add New Dependencies**:
+   ```bash
+   # Add to project
+   uv add new-package
+   
+   # Update build script and redeploy
+   ./deploy.sh
+   ```
 
-- API keys are loaded from environment variables
-- Sensitive data should not be hardcoded
-- Generated policies should be reviewed by security professionals
-- Follow your organization's data handling policies
+3. **Dependency Updates**:
+   ```bash
+   # Update all dependencies
+   uv sync --upgrade
+   
+   # Rebuild layer and deploy
+   ./build_layer.sh
+   terraform apply
+   ```
+
+## 📈 Performance Optimization
+
+### uv Benefits
+- **Fast installs**: 10-100x faster than pip
+- **Reliable resolution**: Consistent dependency resolution
+- **Lock files**: Reproducible builds with uv.lock
+- **Single binary**: No Python required for installation
+
+### Production Tips
+```bash
+# Use locked dependencies for production
+uv sync --frozen
+
+# Build optimized Lambda layer
+./build_layer.sh
+
+# Use specific Python version
+uv sync --python 3.11
+```
