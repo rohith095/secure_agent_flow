@@ -137,7 +137,8 @@ class SCATool(BaseTool):
 
             headers = {
                 "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "X-IDAP-NATIVE-CLIENT": "Web", "Accept": "*/*"
             }
             identity_url = f"{SCA_BASE_URL}/CDirectoryService/CreateUser"
             resp = requests.post(identity_url, json=identity_payload, headers=headers, timeout=REQUEST_TIMEOUT_SEC)

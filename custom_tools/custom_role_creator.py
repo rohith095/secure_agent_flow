@@ -12,6 +12,14 @@ from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
 
+class DateTimeEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles datetime objects."""
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
+
 class AWSRoleCreatorInput(BaseModel):
     """Input schema for AWS Role Creator tool."""
     role_name: str = Field(..., description="Name of the IAM role to create")
@@ -175,7 +183,7 @@ class AWSRoleCreator(BaseTool):
                     "role_details": existing_role['Role'],
                     "cross_account_info": session_info,
                     "message": f"Role '{role_name}' already exists in account {customer_account_id if customer_account_id else 'local'}"
-                }, indent=2)
+                }, indent=2, cls=DateTimeEncoder)
             except ClientError as e:
                 if e.response['Error']['Code'] != 'NoSuchEntity':
                     return json.dumps({
@@ -186,7 +194,7 @@ class AWSRoleCreator(BaseTool):
             # Create the role
             create_role_params = {
                 'RoleName': role_name,
-                'AssumeRolePolicyDocument': json.dumps(trust_policy),
+                'AssumeRolePolicyDocument': json.dumps(trust_policy, cls=DateTimeEncoder),
                 'Path': '/',
                 'MaxSessionDuration': max_session_duration
             }
@@ -208,7 +216,7 @@ class AWSRoleCreator(BaseTool):
                     iam_client.put_role_policy(
                         RoleName=role_name,
                         PolicyName=policy_name,
-                        PolicyDocument=json.dumps(policy)
+                        PolicyDocument=json.dumps(policy, cls=DateTimeEncoder)
                     )
                     attached_policies.append(policy_name)
                     self.logger.info(f"Attached policy {policy_name} to role {role_name}")
@@ -229,7 +237,7 @@ class AWSRoleCreator(BaseTool):
                 "created_in_account": customer_account_id if customer_account_id else "local"
             }
 
-            return json.dumps(result, indent=2)
+            return json.dumps(result, indent=2, cls=DateTimeEncoder)
 
         except ClientError as e:
             error_msg = f"AWS IAM Error: {e.response['Error']['Code']} - {e.response['Error']['Message']}"

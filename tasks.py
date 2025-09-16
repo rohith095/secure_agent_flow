@@ -41,7 +41,7 @@ class SecureAgentFlowTasks:
             - All operations must be performed in the customer account via cross-account role assumption
             - Custom roles MUST be created in the customer account, not the management account
             - Include cross-account information in all outputs
-            
+
             Provide a structured output with:
             - Cross-account role assumption status
             - CloudTrail analysis summary for all users in customer account
@@ -92,7 +92,7 @@ class SecureAgentFlowTasks:
                      "assumed_role": "arn:aws:iam::CUSTOMER_ACCOUNT_ID:role/CrossAccountAccessRole"
                    }
                  }
-            
+
             Format: Structured JSON report with actionable recommendations, cross-account details, and CREATED_CUSTOM_ROLES section for policy creation"""
         )
 
@@ -104,7 +104,7 @@ class SecureAgentFlowTasks:
         return Task(
             description="""
             Create comprehensive mappings between roles, permissions, and resources based on the fetched data.
-            
+
             Your task includes:
             1. Map roles to specific permissions
             2. Create resource access matrices
@@ -184,12 +184,30 @@ class SecureAgentFlowTasks:
             
             Your task includes:
             1. **FIRST: Call rescan to get recently created roles** - Use the CyberArk SCA Tool with action='rescan' to scan for recently created roles by the roles_and_details_fetcher_agent
-            2. **Extract custom roles from the CloudTrail analysis results** - Look for role ARNs created by the fetch task
-            3. **Prepare the policy payload** in the following exact format:
+            2. **SECOND: Extract IAM user and role mapping** from the fetch context and rescan results
+            3. **THIRD: Create identity users for each IAM user** - Use CyberArk SCA Tool with action='create_identity_user' for each IAM user found in the analysis
+            4. **FOURTH: Extract custom roles from the CloudTrail analysis results** - Look for role ARNs created by the fetch task
+            5. **FIFTH: Prepare the policy payload** with the dynamically created identity users and custom roles
+            6. **SIXTH: Use the CyberArk SCA Tool** to create the actual policy with action='create_policy' and the prepared payload
+            
+            MANDATORY STEPS FOR IDENTITY USER CREATION:
+            1. **RESCAN FIRST**: Call CyberArk SCA Tool with action='rescan' to get recently created roles
+            2. **Extract IAM user details** from fetch context and identify the iam_user_role_mapping section
+            3. **Create identity users**: For each IAM user found, call CyberArk SCA Tool with action='create_identity_user' using this payload format:
+               {{
+                 "Name": "<IAM_USERNAME>@cyberark.cloud.55567",
+                 "Mail": "<IAM_USER_EMAIL>",
+                 "Password": "abcD1234",
+                 "InEverybodyRole": True,
+                 "InSysAdminRole": False
+               }}
+               Where <IAM_USERNAME> is replaced with the actual IAM username and <IAM_USER_EMAIL> with the user's email
+            4. **Map created identity users to custom roles**: Maintain mapping between IAM users, created identity users, and their associated custom roles
+            5. **Prepare the policy payload** using the created identity users instead of static identities:
                {{
                  "csp": "AWS",
-                 "name": "optimized_policy_v1",
-                 "description": "Policy based on CloudTrail analysis for least-privilege access",
+                 "name": "optimized_policy_<IAM_USERNAME>_v1",
+                 "description": "Policy based on CloudTrail analysis for least-privilege access for <IAM_USERNAME>",
                  "startDate": null,
                  "endDate": null,
                  "policyType": "pre_defined",
@@ -202,7 +220,7 @@ class SecureAgentFlowTasks:
                  ],
                  "identities": [
                    {{
-                     "entityName": "naveen_kumar_bontu@cyberark.cloud.55567",
+                     "entityName": "<CREATED_IDENTITY_USER_NAME>",
                      "entitySourceId": "09B9A9B0-6CE8-465F-AB03-65766D33B05E",
                      "entityClass": "user"
                    }}
@@ -217,33 +235,38 @@ class SecureAgentFlowTasks:
                    "timeZone": "Asia/Jerusalem"
                  }}
                }}
-            
-            4. **Use the CyberArk SCA Tool** to create the actual policy with action='create_policy' and the prepared payload
-            5. **IMPORTANT**: Replace the roles array with the custom roles created in the fetch task analysis and discovered via rescan
-            6. **Extract the account ID** from the role ARN for the entitySourceId field
+            6. **Create separate policies** for each IAM user-role combination to ensure proper mapping
+            7. **Call the CyberArk SCA Tool** with action='create_policy' for each policy payload
             
             Requirements: {policy_requirements}
             
-            MANDATORY STEPS:
-            1. **RESCAN FIRST**: Call CyberArk SCA Tool with action='rescan' to get recently created roles
-            2. Parse the fetch context to find custom role ARNs created during CloudTrail analysis
-            3. For each role ARN, extract the account ID (the number after arn:aws:iam::)
-            4. Create the policy payload with the custom roles in the roles array
-            5. Call the CyberArk SCA Tool with action='create_policy' and the prepared payload
-            6. Include the policy creation results in your output
-            
-            **CRITICAL**: 
-            - ALWAYS call rescan before creating policies to ensure the latest roles are available
-            - Only change the "roles" array in the payload template. Keep all other fields exactly as shown in the template above.
+            **CRITICAL REQUIREMENTS**: 
+            - ALWAYS call rescan before creating identity users and policies
+            - Create identity users BEFORE creating policies
+            - Maintain proper mapping between IAM users, identity users, and custom roles
+            - Create one policy per IAM user-role combination for precise access control
+            - Use the created identity user details in the policy identities array
+            - Extract account IDs from role ARNs for the entitySourceId field in roles array
+            - **INCLUDE entitySourceId for identity users** - This is the ID returned from the create_identity_user operation
+            - Generate unique policy names for each user using pattern: optimized_policy_<iam_username>_v1
             """,
             agent=agent,
             expected_output="""A complete security policy implementation containing:
             1. **Rescan Results** - Response from the rescan operation showing recently discovered roles
-            2. **Extracted Custom Roles** - List of role ARNs found in the CloudTrail analysis and rescan results
-            3. **Policy Payload** - The exact JSON payload used for policy creation
-            4. **CyberArk SCA Policy Creation Results** - Response from the SCA tool showing successful policy creation
-            5. **Account ID Mapping** - Mapping of role ARNs to their account IDs
-            6. **Implementation Summary** - Summary of the policy created and its configuration
+            2. **IAM User-Role Mapping** - Extracted mapping from fetch context showing IAM users and their associated custom roles
+            3. **Identity User Creation Results** - Results from creating identity users for each IAM user with the following format:
+               - IAM Username: original IAM username
+               - Created Identity Name: <iam_username>@cyberark.cloud.55567
+               - Identity User ID: Generated ID from SCA tool (CRITICAL for entitySourceId)
+               - Associated Custom Role: ARN of the custom role for this user
+            4. **Policy Payloads** - The exact JSON payloads used for each policy creation (must include entitySourceId for identities)
+            5. **CyberArk SCA Policy Creation Results** - Response from the SCA tool showing successful policy creation for each user-role combination
+            6. **User-Role-Policy Mapping** - Complete mapping showing:
+               - IAM Username
+               - Created Identity User Name and ID
+               - Associated Custom Role ARN
+               - Created Policy ID and Name
+            7. **Implementation Summary** - Summary of all policies created and their configurations
             
-            Format: Structured report with the rescan results, policy payload, SCA tool results, and implementation details"""
+            Format: Structured report with rescan results, identity user creation results, policy payloads, SCA tool results, user-role-policy mappings, and implementation details"""
         )
