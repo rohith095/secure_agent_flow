@@ -262,7 +262,6 @@ class SecureAgentFlowTasks:
             - Create one policy per IAM user-role combination for precise access control
             - Use the created identity user details in the policy identities array
             - Extract account IDs from role ARNs for the entitySourceId field in roles array
-            - **INCLUDE entitySourceId for identity users** - This is the ID returned from the create_identity_user operation
             - Generate unique policy names for each user using pattern: optimized_policy_<iam_username>_v1
             """,
             agent=agent,
@@ -272,7 +271,6 @@ class SecureAgentFlowTasks:
             3. **Identity User Creation Results** - Results from creating identity users for each IAM user with the following format:
                - IAM Username: original IAM username
                - Created Identity Name: <iam_username>@cyberark.cloud.55567
-               - Identity User ID: Generated ID from SCA tool (CRITICAL for entitySourceId)
                - Associated Custom Role: ARN of the custom role for this user
             4. **Policy Payloads** - The exact JSON payloads used for each policy creation (must include entitySourceId for identities)
             5. **CyberArk SCA Policy Creation Results** - Response from the SCA tool showing successful policy creation for each user-role combination
