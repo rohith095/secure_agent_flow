@@ -14,7 +14,7 @@ class SecureAgentFlowCrew:
         self.agents = SecureAgentFlowAgents()
         self.tasks = SecureAgentFlowTasks()
 
-    def run_workflow(self, context_input="", policy_requirements=""):
+    def run_workflow(self, context_input=""):
         """
         Execute the complete secure agent flow workflow.
 
@@ -28,9 +28,9 @@ class SecureAgentFlowCrew:
 
         # Initialize all agents
         roles_fetcher = self.agents.roles_and_details_fetcher_agent()
-        mapper = self.agents.mapping_agent()
-        preparer = self.agents.prepare_agent()
-        policy_creator = self.agents.policy_creator_agent()
+        # mapper = self.agents.mapping_agent()
+        # preparer = self.agents.prepare_agent()
+        # policy_creator = self.agents.policy_creator_agent()
 
         # Define all tasks with dependencies
         fetch_task = self.tasks.fetch_roles_and_details_task(
@@ -38,19 +38,18 @@ class SecureAgentFlowCrew:
             context_input=context_input
         )
 
-        mapping_task = self.tasks.create_mapping_task(agent=mapper)
+        # mapping_task = self.tasks.create_mapping_task(agent=mapper)
 
-        prepare_task = self.tasks.prepare_data_task(agent=preparer)
+        # prepare_task = self.tasks.prepare_data_task(agent=preparer)
 
-        policy_task = self.tasks.create_policy_task(
-            agent=policy_creator,
-            policy_requirements=policy_requirements
-        )
+        # policy_task = self.tasks.create_policy_task(
+        #     agent=policy_creator,
+        # )
 
         # Create and configure the crew
         crew = Crew(
-            agents=[roles_fetcher, mapper, preparer, policy_creator],
-            tasks=[fetch_task, mapping_task, prepare_task, policy_task],
+            agents=[roles_fetcher],
+            tasks=[fetch_task],
             process=Process.sequential,
             verbose=True
         )
@@ -85,13 +84,13 @@ class SecureAgentFlowCrew:
 
         task_mapping = {
             'fetch': (self.agents.roles_and_details_fetcher_agent(),
-                     lambda agent: self.tasks.fetch_roles_and_details_task(agent, context_input)),
+                      lambda agent: self.tasks.fetch_roles_and_details_task(agent, context_input)),
             'map': (self.agents.mapping_agent(),
-                   lambda agent: self.tasks.create_mapping_task(agent)),
+                    lambda agent: self.tasks.create_mapping_task(agent)),
             'prepare': (self.agents.prepare_agent(),
-                       lambda agent: self.tasks.prepare_data_task(agent)),
+                        lambda agent: self.tasks.prepare_data_task(agent)),
             'policy': (self.agents.policy_creator_agent(),
-                      lambda agent: self.tasks.create_policy_task(agent, policy_requirements))
+                       lambda agent: self.tasks.create_policy_task(agent, policy_requirements))
         }
 
         if task_name not in task_mapping:
@@ -124,3 +123,16 @@ class SecureAgentFlowCrew:
                 "error": str(e),
                 "message": f"Error occurred during task '{task_name}' execution"
             }
+
+
+if __name__ == "__main__":
+    print("Initializing SecureAgentFlowCrew")
+    crew = SecureAgentFlowCrew()
+
+    print("Starting workflow execution")
+    context_input = """
+    Optimize the user permissions for AWS account with ID 364358839657.
+    """
+    result = crew.run_workflow(
+        context_input=context_input,
+    )

@@ -9,36 +9,29 @@ import sys
 
 def main():
     """Main function to run the secure agent flow workflow."""
-    print("🚀 Welcome to Secure Agent Flow!")
-    print("=" * 50)
-
-    # Validate configuration
-    config_status = Config.validate_config()
-    if not config_status["valid"]:
-        print(f"❌ Configuration Error: {config_status['message']}")
-        return
-
-    print("✅ Configuration validated successfully!")
+    # print("🚀 Welcome to Secure Agent Flow!")
+    # print("=" * 50)
+    #
+    # # Validate configuration
+    # config_status = Config.validate_config()
+    # if not config_status["valid"]:
+    #     print(f"❌ Configuration Error: {config_status['message']}")
+    #     return
+    #
+    # print("✅ Configuration validated successfully!")
 
     # Initialize the crew
     crew = SecureAgentFlowCrew()
 
     # Example usage - you can modify these inputs
     context_input = """
-    Example system context: 
-    - Enterprise application with multiple user types
-    - Role-based access control needed
-    - Compliance requirements: SOX, GDPR
-    - Integration with Active Directory
+    Optimize the user permissions for AWS account with ID 364358839657.
     """
 
     policy_requirements = """
     Policy requirements:
-    - Compliance with SOX and GDPR
-    - Segregation of duties enforcement
-    - Regular access reviews (quarterly)
+    - ZSP 
     - Principle of least privilege
-    - Audit trail requirements
     """
 
     print("🤖 Starting the 4-agent workflow...")
@@ -47,8 +40,7 @@ def main():
 
     # Run the complete workflow
     result = crew.run_workflow(
-        context_input=context_input,
-        policy_requirements=policy_requirements
+        context_input=context_input
     )
 
     if result["success"]:

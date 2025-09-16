@@ -5,6 +5,7 @@ Configuration settings for the secure agent flow application.
 import os
 import boto3
 from dotenv import load_dotenv
+from crewai import Crew, LLM
 
 # Load environment variables from .env file
 load_dotenv()
@@ -15,8 +16,7 @@ class Config:
 
     # AWS Bedrock configuration
     AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
-    BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-sonnet-20240229-v1:0")
-
+    BEDROCK_MODEL_ID = "us.anthropic.claude-sonnet-4-20250514-v1:0"
     # Crew configuration
     CREW_VERBOSE = True
 
@@ -42,14 +42,20 @@ class Config:
     @classmethod
     def get_bedrock_llm(cls):
         """Get configured Bedrock LLM instance."""
-        from langchain_aws import ChatBedrock
+        # from langchain_aws import ChatBedrock
+        #
+        # return ChatBedrock(
+        #     model=cls.BEDROCK_MODEL_ID,
+        #     region=cls.AWS_REGION,
+        #     model_kwargs={
+        #         "max_tokens": 4096,
+        #         "temperature": 0.1,
+        #         "top_p": 0.9,
+        #     }
+        # )
+        model_id = "us.anthropic.claude-sonnet-4-20250514-v1:0"
 
-        return ChatBedrock(
-            model_id=cls.BEDROCK_MODEL_ID,
-            region_name=cls.AWS_REGION,
-            model_kwargs={
-                "max_tokens": 4096,
-                "temperature": 0.1,
-                "top_p": 0.9,
-            }
+        llm = LLM(
+            model=model_id
         )
+        return llm

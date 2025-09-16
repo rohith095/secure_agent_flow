@@ -26,7 +26,7 @@ class SecureAgentFlowAgents:
             and configurations to extract detailed information about user roles, their permissions, 
             and access patterns.""",
             verbose=True,
-            tools=[CloudTrailEventsFetcher],
+            tools=[CloudTrailEventsFetcher()],
             allow_delegation=False,
             llm=self.llm
         )
