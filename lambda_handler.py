@@ -5,6 +5,7 @@ This handler processes requests and runs the CrewAI workflow with AWS Bedrock.
 
 import json
 import logging
+import os
 from typing import Dict, Any
 
 # Configure logging
@@ -16,11 +17,14 @@ try:
     from config import Config
 except ImportError as e:
     logger.error(f"Import error: {e}")
+
+
     # For Lambda deployment, these modules should be available
     # Define fallback classes to prevent NameError
     class SecureAgentFlowCrew:
         def run_workflow(self, **kwargs):
             raise RuntimeError("SecureAgentFlowCrew not available")
+
 
     class Config:
         @staticmethod
@@ -46,7 +50,7 @@ def agent_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
         body = event.get('body', '{}')
         if isinstance(body, str):
             body = json.loads(body)
-
+        os.environ["WEBSOCKET_CONNECTION_ID"] = event.get('requestContext', {}).get('connectionId', "123456")
         context_input = body.get("context_input")
 
         # Validate configuration
@@ -103,76 +107,3 @@ def agent_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                 'message': str(e)
             })
         }
-
-
-def bedrock_agent_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
-    """
-    Specialized handler for AWS Bedrock Agent integration.
-
-    Args:
-        event: Bedrock agent event
-        context: Lambda context
-
-    Returns:
-        Bedrock agent response format
-    """
-    try:
-        logger.info(f"Bedrock agent event: {json.dumps(event)}")
-
-        # Extract input from Bedrock agent event format
-        input_text = event.get('inputText', '')
-        session_attributes = event.get('sessionAttributes', {})
-
-        # Parse the input for context and policy requirements
-        # This is a simple parser - you can make it more sophisticated
-        if 'context:' in input_text and 'policy:' in input_text:
-            parts = input_text.split('policy:')
-            context_input = parts[0].replace('context:', '').strip()
-            policy_requirements = parts[1].strip()
-        else:
-            context_input = input_text
-            policy_requirements = session_attributes.get('policy_requirements', '')
-
-        # Run the workflow
-        crew = SecureAgentFlowCrew()
-        result = crew.run_workflow(
-            context_input=context_input,
-            policy_requirements=policy_requirements
-        )
-
-        # Format response for Bedrock agent
-        response_text = f"Secure agent flow completed. Results: {result}"
-
-        return {
-            'messageVersion': '1.0',
-            'response': {
-                'actionGroup': event.get('actionGroup', ''),
-                'function': event.get('function', ''),
-                'functionResponse': {
-                    'responseBody': {
-                        'TEXT': {
-                            'body': response_text
-                        }
-                    }
-                }
-            }
-        }
-
-    except Exception as e:
-        logger.error(f"Error in bedrock_agent_handler: {str(e)}", exc_info=True)
-
-        return {
-            'messageVersion': '1.0',
-            'response': {
-                'actionGroup': event.get('actionGroup', ''),
-                'function': event.get('function', ''),
-                'functionResponse': {
-                    'responseBody': {
-                        'TEXT': {
-                            'body': f"Error processing request: {str(e)}"
-                        }
-                    }
-                }
-            }
-        }
-

@@ -1,8 +1,18 @@
 """
 Tasks definition for the secure agent flow crew.
 """
+import os
 
 from crewai import Task
+
+from websocket_handler import send_message_to_connection
+
+
+def send_to_websocket(message):
+    """Placeholder function to send messages to a WebSocket."""
+    # Implement WebSocket sending logic here
+    send_message_to_connection(connection_id=os.environ['WEBSOCKET_CONNECTION_ID'], message=message)
+    print(f"WebSocket message: {message}")
 
 
 class SecureAgentFlowTasks:
@@ -93,7 +103,8 @@ class SecureAgentFlowTasks:
                    }
                  }
 
-            Format: Structured JSON report with actionable recommendations, cross-account details, and CREATED_CUSTOM_ROLES section for policy creation"""
+            Format: Structured JSON report with actionable recommendations, cross-account details, and CREATED_CUSTOM_ROLES section for policy creation""",
+            callback=send_to_websocket
         )
 
 
@@ -132,7 +143,9 @@ class SecureAgentFlowTasks:
             6. Permission optimization recommendations
             7. Cross-role dependency mapping
             
-            Format: Structured diagrams, matrices, and analysis report"""
+            Format: Structured diagrams, matrices, and analysis report""",
+            callback=send_to_websocket
+
         )
 
     def prepare_data_task(self, agent):
@@ -168,7 +181,9 @@ class SecureAgentFlowTasks:
             6. Policy creation roadmap
             7. Data quality validation report
             
-            Format: Structured templates and validated datasets ready for policy creation"""
+            Format: Structured templates and validated datasets ready for policy creation""",
+            callback=send_to_websocket
+
         )
 
     def create_policy_task(self, agent, policy_requirements="", fetch_context=""):
@@ -268,5 +283,6 @@ class SecureAgentFlowTasks:
                - Created Policy ID and Name
             7. **Implementation Summary** - Summary of all policies created and their configurations
             
-            Format: Structured report with rescan results, identity user creation results, policy payloads, SCA tool results, user-role-policy mappings, and implementation details"""
+            Format: Professional policy documents with clear procedures, responsibilities, and compliance requirements""",
+            callback=send_to_websocket
         )
