@@ -28,7 +28,7 @@ except ImportError as e:
             return {"valid": False, "message": "Config module not available"}
 
 
-def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
+def agent_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
     """
     AWS Lambda handler function for secure agent flow.
 
@@ -47,8 +47,7 @@ def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
         if isinstance(body, str):
             body = json.loads(body)
 
-        context_input = body.get('context_input', '')
-        policy_requirements = body.get('policy_requirements', '')
+        context_input = body.get("context_input")
 
         # Validate configuration
         config_status = Config.validate_config()
@@ -72,8 +71,7 @@ def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
 
         logger.info("Starting workflow execution")
         result = crew.run_workflow(
-            context_input=context_input,
-            policy_requirements=policy_requirements
+            context_input=context_input
         )
 
         logger.info("Workflow completed successfully")
@@ -177,3 +175,4 @@ def bedrock_agent_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
                 }
             }
         }
+

@@ -42,17 +42,6 @@ class Config:
     @classmethod
     def get_bedrock_llm(cls):
         """Get configured Bedrock LLM instance."""
-        # from langchain_aws import ChatBedrock
-        #
-        # return ChatBedrock(
-        #     model=cls.BEDROCK_MODEL_ID,
-        #     region=cls.AWS_REGION,
-        #     model_kwargs={
-        #         "max_tokens": 4096,
-        #         "temperature": 0.1,
-        #         "top_p": 0.9,
-        #     }
-        # )
         model_id = "us.anthropic.claude-sonnet-4-20250514-v1:0"
 
         llm = LLM(

@@ -1,0 +1,119 @@
+{
+  "service": "secure-agent-flow",
+  "frameworkVersion": "3",
+  "provider": {
+    "name": "aws",
+    "runtime": "python3.11",
+    "region": "${opt:region, 'us-east-1'}",
+    "stage": "${opt:stage, 'dev'}",
+    "timeout": 300,
+    "memorySize": 1024,
+    "environment": {
+      "AWS_REGION": "${self:provider.region}",
+      "BEDROCK_MODEL_ID": "anthropic.claude-3-sonnet-20240229-v1:0",
+      "ENVIRONMENT": "${self:provider.stage}"
+    },
+    "iam": {
+      "role": {
+        "statements": [
+          {
+            "Effect": "Allow",
+            "Action": [
+              "logs:CreateLogGroup",
+              "logs:CreateLogStream",
+              "logs:PutLogEvents"
+            ],
+            "Resource": "arn:aws:logs:*:*:*"
+          },
+          {
+            "Effect": "Allow",
+            "Action": [
+              "bedrock:InvokeModel",
+              "bedrock:InvokeModelWithResponseStream"
+            ],
+            "Resource": "*"
+          }
+        ]
+      }
+    }
+  },
+  "functions": {
+    "agentHandler": {
+      "handler": "lambda_handler.agent_handler",
+      "name": "${self:service}-${self:provider.stage}-agent",
+      "description": "Secure Agent Flow - Unified handler for all agent operations",
+      "layers": [
+        {"Ref": "PythonRequirementsLambdaLayer"}
+      ],
+      "events": [
+        {
+          "http": {
+            "path": "/execute",
+            "method": "post",
+            "cors": true
+          }
+        }
+      ]
+    }
+  },
+  "resources": {
+    "Resources": {
+      "AgentHandlerLogGroup": {
+        "Type": "AWS::Logs::LogGroup",
+        "Properties": {
+          "LogGroupName": "/aws/lambda/${self:service}-${self:provider.stage}-agent",
+          "RetentionInDays": 14
+        }
+      }
+    },
+    "Outputs": {
+      "DependenciesLayerArn": {
+        "Value": {
+          "Ref": "PythonRequirementsLambdaLayer"
+        },
+        "Export": {
+          "Name": "${self:service}-${self:provider.stage}-dependencies-layer-arn"
+        }
+      },
+      "ApiGatewayRestApiId": {
+        "Value": {
+          "Ref": "ApiGatewayRestApi"
+        },
+        "Export": {
+          "Name": "${self:service}-${self:provider.stage}-api-id"
+        }
+      }
+    }
+  },
+  "package": {
+    "patterns": [
+      "!**",
+      "lambda_handler.py",
+      "crew.py",
+      "agents.py",
+      "tasks.py",
+      "config.py",
+      "utils.py",
+      "websocket_logger.py",
+      "custom_tools/**"
+    ]
+  },
+  "plugins": [
+    "serverless-python-requirements"
+  ],
+  "custom": {
+    "pythonRequirements": {
+      "dockerizePip": true,
+      "layer": true,
+      "fileName": "requirements.txt",
+      "pipCmdExtraArgs": [
+        "--no-cache-dir"
+      ],
+      "slim": true,
+      "strip": false,
+      "useStaticCache": false,
+      "useDownloadCache": false
+    }
+  }
+}
+
