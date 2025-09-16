@@ -20,7 +20,6 @@ class SecureAgentFlowCrew:
 
         Args:
             context_input (str): Initial context or system information to analyze
-            policy_requirements (str): Specific policy requirements or compliance frameworks
 
         Returns:
             dict: Results from the crew execution
