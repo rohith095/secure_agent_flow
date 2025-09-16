@@ -14,36 +14,53 @@ class SecureAgentFlowTasks:
         """
         return Task(
             description=f"""
-            Analyze the provided system or documentation to extract comprehensive role and permission details.
+            Optimize AWS IAM permissions by analyzing actual usage patterns from CloudTrail events.
+            
+            MANDATORY WORKFLOW - Execute in this exact order:
+            1. **FIRST: Use CloudTrail_Events_Fetcher tool** to gather comprehensive activity data for ALL IAM users
+            2. **SECOND: Analyze CloudTrail events** to identify actual permission usage patterns and frequency
+            3. **THIRD: Use AWS IAM MCP server tools** to create optimized custom roles based on analysis
             
             Your task includes:
-            1. Identify all user roles present in the system
-            2. Extract detailed permissions for each role
-            3. Document access levels and restrictions
-            4. Identify role hierarchies and inheritance patterns
-            5. Note any special access conditions or temporary permissions
-            6. Document role assignment criteria and processes
+            - Fetch CloudTrail events for all IAM users (the tool is now fixed to 1 day of data)
+            - Analyze actual API calls and services used by each user
+            - Identify least-privilege permission requirements
+            - Detect unused or excessive permissions
+            - Create custom IAM roles that match actual usage patterns
+            - Document permission optimization recommendations
             
             Context: {context_input}
             
+            DO NOT use AWS IAM MCP server tools until CloudTrail analysis is complete.
+            ALWAYS include the ctx parameter when calling AWS IAM MCP server tools.
+            
             Provide a structured output with:
-            - Complete list of roles with descriptions
-            - Detailed permissions matrix
-            - Access level documentation
-            - Role hierarchy mapping
-            - Special conditions and exceptions
+            - CloudTrail analysis summary for all users
+            - Actual vs assigned permissions comparison
+            - Optimized custom role definitions
+            - Implementation recommendations
             """,
             agent=agent,
-            expected_output="""A comprehensive report containing:
-            1. Roles inventory with detailed descriptions
-            2. Permissions matrix showing role-to-permission mappings
-            3. Access level documentation (read, write, admin, etc.)
-            4. Role hierarchy structure
-            5. Special access conditions and exceptions
-            6. Role assignment criteria and processes
+            expected_output="""A comprehensive AWS IAM optimization report containing:
+            1. CloudTrail Events Analysis Summary
+               - Total events analyzed per user
+               - Most frequently used AWS services and actions
+               - Time-based usage patterns
             
-            Format: Structured JSON or detailed markdown report"""
+            2. Permission Usage Analysis
+               - Current permissions vs actual usage comparison
+               - Unused permissions identification
+               - Over-privileged accounts detection
+            
+            3. Custom Role Definitions
+               - Least-privilege role specifications
+               - Role-to-user mapping recommendations
+               - Permission boundaries and policies
+            
+            
+            Format: Structured JSON report with actionable recommendations"""
         )
+
 
     def create_mapping_task(self, agent):
         """

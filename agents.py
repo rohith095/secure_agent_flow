@@ -1,10 +1,17 @@
 """
 Agents definition for the secure agent flow crew.
 """
+import os
 
 from crewai import Agent
+from crewai_tools.adapters.mcp_adapter import MCPServerAdapter
+
 from config import Config
+from custom_tools.custom_role_creator import AWSRoleCreator
 from custom_tools.role_fetcher import CloudTrailEventsFetcher
+from mcp import StdioServerParameters
+
+from custom_tools.sca_tool import SCATool
 
 
 class SecureAgentFlowAgents:
@@ -16,8 +23,10 @@ class SecureAgentFlowAgents:
 
     def roles_and_details_fetcher_agent(self):
         """
-        Agent responsible for fetching roles and details from various sources.
+        Agent responsible for optimizing AWS IAM permissions by analyzing CloudTrail events
+        and creating least-privilege custom roles.
         """
+
         return Agent(
             role="Roles and Details Fetcher",
             goal="Identify and extract comprehensive role definitions, permissions, and access details from various sources",
@@ -26,7 +35,7 @@ class SecureAgentFlowAgents:
             and configurations to extract detailed information about user roles, their permissions, 
             and access patterns.""",
             verbose=True,
-            tools=[CloudTrailEventsFetcher()],
+            tools=[CloudTrailEventsFetcher(),AWSRoleCreator()],
             allow_delegation=False,
             llm=self.llm
         )
@@ -74,6 +83,7 @@ class SecureAgentFlowAgents:
             frameworks like SOX, GDPR, HIPAA, and can translate technical access controls 
             into clear, actionable policies that meet regulatory requirements.""",
             verbose=True,
+            tools= [SCATool()],
             allow_delegation=False,
             llm=self.llm
         )

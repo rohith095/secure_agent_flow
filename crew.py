@@ -51,7 +51,9 @@ class SecureAgentFlowCrew:
             agents=[roles_fetcher],
             tasks=[fetch_task],
             process=Process.sequential,
-            verbose=True
+            verbose=True,
+            # Disable telemetry
+            share_crew=False
         )
 
         # Execute the workflow
@@ -131,8 +133,8 @@ if __name__ == "__main__":
 
     print("Starting workflow execution")
     context_input = """
-    Optimize the user permissions for AWS account with ID 364358839657.
-    """
+    Fetches CloudTrail events for only Hackathon_bad_user and returns well-formatted JSON and then create a custom role based on 
+    the permissions usage form the events """
     result = crew.run_workflow(
         context_input=context_input,
     )

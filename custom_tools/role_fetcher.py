@@ -12,12 +12,17 @@ load_dotenv()
 
 class CloudTrailFetcherInput(BaseModel):
     """Input schema for CloudTrail Events Fetcher tool."""
-    days_back: int = Field(default=7, description="Number of days back to fetch events (default: 7)")
     specific_user: Optional[str] = Field(default=None, description="Specific IAM username to fetch events for (optional)")
 
 class CloudTrailEventsFetcher(BaseTool):
     name: str = "CloudTrail Events Fetcher"
-    description: str = "Fetches CloudTrail events for all AWS IAM users and returns well-formatted JSON"
+    description: str = (
+        "REQUIRED FIRST STEP for AWS IAM optimization tasks. This tool fetches comprehensive CloudTrail events "
+        "for ALL AWS IAM users to analyze their actual usage patterns and permissions. "
+        "Use this BEFORE any IAM role creation or permission analysis. "
+        "Returns detailed activity data needed for creating least-privilege custom roles. "
+        "Essential for understanding what permissions users actually need based on their activity history."
+    )
     args_schema: Type[BaseModel] = CloudTrailFetcherInput
 
     def _get_all_iam_users(self):
@@ -34,8 +39,8 @@ class CloudTrailEventsFetcher(BaseTool):
 
         return {"users": users, "error": None}
 
-    def _get_cloudtrail_events_for_user(self, username: str, start_time: datetime, end_time: datetime):
-        """Get CloudTrail events for a specific user with pagination"""
+    def _get_cloudtrail_events_for_user(self, username: str, start_time: datetime, end_time: datetime, max_events: int = 20):
+        """Get CloudTrail events for a specific user with pagination and event limit"""
         cloudtrail_client = boto3.client('cloudtrail', region_name='us-east-1')
         all_events = []
 
@@ -47,12 +52,15 @@ class CloudTrailEventsFetcher(BaseTool):
                 ],
                 StartTime=start_time,
                 EndTime=end_time
-                # Removed PaginationConfig to fetch all events without limits
             )
 
             for page in page_iterator:
                 events = page.get('Events', [])
                 for event in events:
+                    # Stop if we've reached the maximum number of events
+                    if len(all_events) >= max_events:
+                        break
+
                     # Convert datetime objects to ISO format strings for JSON serialization
                     event_data = {
                         'event_id': event.get('EventId'),
@@ -98,10 +106,13 @@ class CloudTrailEventsFetcher(BaseTool):
                                 'tls_details': ct_event.get('tlsDetails')
                             })
                         except (json.JSONDecodeError, TypeError):
-                            # If CloudTrailEvent is not valid JSON, keep it as is
                             pass
 
                     all_events.append(event_data)
+
+                # Break out of the page loop if we've reached the max events
+                if len(all_events) >= max_events:
+                    break
 
         except ClientError as e:
             return {"error": f"Error getting CloudTrail events for user {username}: {str(e)}", "events": []}
@@ -116,7 +127,7 @@ class CloudTrailEventsFetcher(BaseTool):
 
         def fetch_user_events(user):
             username = user.get("UserName")
-            return username, self._get_cloudtrail_events_for_user(username, start_time, end_time)
+            return username, self._get_cloudtrail_events_for_user(username, start_time, end_time, max_events=50)
 
         with ThreadPoolExecutor(max_workers=16) as executor:
             future_to_user = {executor.submit(fetch_user_events, user): user for user in iam_users}
@@ -147,20 +158,26 @@ class CloudTrailEventsFetcher(BaseTool):
                     })
         return users_data, errors, total_events
 
-    def _run(self, days_back: int = 1, specific_user: str = None) -> str:
+    def _run(self, specific_user: str = None) -> str:
         """Execute the CloudTrail events fetching logic and return JSON."""
         try:
-            # Set time range for CloudTrail events
+            # Set time range for CloudTrail events (fixed to 1 day)
+            hours_back = 10  # 1 hour
             end_time = datetime.now()
-            start_time = end_time - timedelta(days=days_back)
+            start_time = end_time - timedelta(hours=hours_back)
 
             result = {
+                "analysis_instruction": (
+                    "CloudTrail data collected successfully. Next steps: "
+                    "1. Analyze the events data below to understand user activity patterns. "
+                    "2. Identify minimum required permissions for each user. "
+                    "3. Use AWS IAM MCP server tools to create optimized custom roles based on this analysis."
+                ),
                 "summary": {
                     "query_time": datetime.now().isoformat(),
                     "time_range": {
                         "start_time": start_time.isoformat(),
-                        "end_time": end_time.isoformat(),
-                        "days_back": days_back
+                        "end_time": end_time.isoformat()
                     },
                     "total_users_processed": 0,
                     "total_events_found": 0
@@ -171,10 +188,16 @@ class CloudTrailEventsFetcher(BaseTool):
 
             # Get IAM users
             if specific_user:
-                # Process only specific user
-                users_result = {"users": [{"UserName": specific_user}], "error": None}
+                # Process only specific user, but skip if it's DeploymentUser
+                if specific_user == "DeploymentUser":
+                    users_result = {"users": [], "error": None}
+                else:
+                    users_result = {"users": [{"UserName": specific_user}], "error": None}
             else:
                 users_result = self._get_all_iam_users()
+                if users_result["error"] is None:
+                    # Filter out DeploymentUser from the list
+                    users_result["users"] = [user for user in users_result["users"] if user.get("UserName") != "DeploymentUser"]
 
             if users_result["error"]:
                 result["errors"].append(users_result["error"])
