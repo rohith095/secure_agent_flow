@@ -31,8 +31,8 @@ class SecureAgentFlowAgents:
             role="Roles and Details Fetcher",
             goal="Identify and extract comprehensive role definitions, permissions, and access details from various sources",
             backstory="""You are an expert in identity and access management with deep knowledge of 
-            role-based access control (RBAC) systems. You excel at analyzing systems, documentation, 
-            and configurations to extract detailed information about user roles, their permissions, 
+            role-based access control (RBAC) systems. You excel at analyzing systems, documentation,
+            and configurations to extract detailed information about user roles, their permissions,
             and access patterns.""",
             verbose=True,
             tools=[CloudTrailEventsFetcher(),AWSRoleCreator()],

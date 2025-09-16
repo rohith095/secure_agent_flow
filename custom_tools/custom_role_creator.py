@@ -1,24 +1,40 @@
 """
-Custom tool for creating AWS IAM custom roles.
+Custom tool for creating AWS IAM custom roles with cross-account support.
 """
 import json
 import logging
 from typing import Any, Dict, List, Optional
+from datetime import datetime
 
 import boto3
 from botocore.exceptions import ClientError
 from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+
+class AWSRoleCreatorInput(BaseModel):
+    """Input schema for AWS Role Creator tool."""
+    role_name: str = Field(..., description="Name of the IAM role to create")
+    trust_policy: Dict[str, Any] = Field(..., description="Trust policy for the role")
+    permission_policies: List[Dict[str, Any]] = Field(..., description="List of permission policies to attach")
+    description: Optional[str] = Field(default=None, description="Description for the role")
+    max_session_duration: int = Field(default=3600, description="Maximum session duration in seconds")
+    customer_account_id: Optional[str] = Field(default=None, description="Customer AWS account ID to assume role into")
+    cross_account_role_name: Optional[str] = Field(default="CyberArkRoleSCA-6c116dd0-9300-11f0-bd68-0e66c6d684e1", description="Role name to assume in customer account")
+    external_id: Optional[str] = Field(default=None, description="External ID for cross-account role assumption")
 
 
 class AWSRoleCreator(BaseTool):
-    """Tool for creating AWS IAM custom roles with specified permissions."""
+    """Tool for creating AWS IAM custom roles with specified permissions and cross-account support."""
 
     name: str = "AWS Role Creator"
     description: str = """
     Creates AWS IAM custom roles with specified trust policies and permission policies.
+    Supports cross-account role creation by assuming a role in the customer account.
     Use this tool to create new IAM roles based on analyzed CloudTrail events and 
-    least-privilege requirements.
+    least-privilege requirements in customer AWS accounts.
     """
+    args_schema: type[BaseModel] = AWSRoleCreatorInput
 
     # Declare all fields
     aws_profile: str = "default"
@@ -43,75 +59,153 @@ class AWSRoleCreator(BaseTool):
             self.logger.error(f"Failed to initialize AWS session: {e}")
             raise
 
+    def _assume_cross_account_role(self, customer_account_id: str, role_name: str, external_id: Optional[str] = None):
+        """Assume a cross-account role and return the assumed role session."""
+        role_arn = f"arn:aws:iam::{customer_account_id}:role/{role_name}"
+        try:
+            # Create STS client
+            sts_client = boto3.client('sts')
+
+            # Prepare assume role parameters
+            assume_role_params = {
+                'RoleArn': role_arn,
+                'RoleSessionName': f'RoleCreator-{datetime.now().strftime("%Y%m%d%H%M%S")}'
+            }
+
+            # Add external ID if provided
+            if external_id:
+                assume_role_params['ExternalId'] = external_id
+
+            # Assume the role
+            response = sts_client.assume_role(**assume_role_params)
+
+            # Extract credentials
+            credentials = response['Credentials']
+
+            # Create session with assumed role credentials
+            assumed_session = boto3.Session(
+                aws_access_key_id=credentials['AccessKeyId'],
+                aws_secret_access_key=credentials['SecretAccessKey'],
+                aws_session_token=credentials['SessionToken']
+            )
+
+            return {
+                "session": assumed_session,
+                "account_id": customer_account_id,
+                "role_arn": role_arn,
+                "error": None
+            }
+
+        except ClientError as e:
+            error_msg = f"Failed to assume cross-account role {role_arn}: {str(e)}"
+            return {
+                "session": None,
+                "account_id": customer_account_id,
+                "role_arn": role_arn,
+                "error": error_msg
+            }
+
     def _run(self,
              role_name: str,
              trust_policy: Dict[str, Any],
              permission_policies: List[Dict[str, Any]],
              description: Optional[str] = None,
              max_session_duration: int = 3600,
-             path: str = "/",
-             tags: Optional[List[Dict[str, str]]] = None) -> str:
+             customer_account_id: Optional[str] = None,
+             cross_account_role_name: str = "CyberArkRoleSCA-6c116dd0-9300-11f0-bd68-0e66c6d684e1",
+             external_id: Optional[str] = None) -> str:
         """
-        Create an AWS IAM custom role with specified policies.
-
-        Args:
-            role_name: Name of the IAM role to create
-            trust_policy: Trust policy document (assume role policy)
-            permission_policies: List of permission policy documents
-            description: Optional description for the role
-            max_session_duration: Maximum session duration in seconds (default: 1 hour)
-            path: Path for the role (default: "/")
-            tags: Optional list of tags for the role
-
-        Returns:
-            String with creation status and role ARN
+        Create an AWS IAM custom role with specified policies in customer account via cross-account access.
         """
         try:
             # Validate inputs
             if not role_name:
-                return "Error: Role name is required"
+                return json.dumps({"error": "Role name is required"})
 
             if not trust_policy:
-                return "Error: Trust policy is required"
+                return json.dumps({"error": "Trust policy is required"})
 
             if not permission_policies or len(permission_policies) == 0:
-                return "Error: At least one permission policy is required"
+                return json.dumps({"error": "At least one permission policy is required"})
+
+            # Validate and fix MaxSessionDuration - AWS minimum is 3600 seconds (1 hour)
+            if max_session_duration < 3600:
+                self.logger.warning(f"MaxSessionDuration {max_session_duration} is below AWS minimum of 3600 seconds. Setting to 3600.")
+                max_session_duration = 3600
+            elif max_session_duration > 43200:  # AWS maximum is 12 hours
+                self.logger.warning(f"MaxSessionDuration {max_session_duration} is above AWS maximum of 43200 seconds. Setting to 43200.")
+                max_session_duration = 43200
+
+            # Initialize IAM client (default or cross-account)
+            iam_client = self.iam_client
+            session_info = {"cross_account": False}
+
+            # If customer account ID is provided, assume cross-account role
+            if customer_account_id:
+                assume_result = self._assume_cross_account_role(
+                    customer_account_id, cross_account_role_name, external_id
+                )
+
+                if assume_result["error"]:
+                    return json.dumps({
+                        "error": assume_result["error"],
+                        "cross_account_info": {
+                            "customer_account_id": customer_account_id,
+                            "role_assumption_success": False
+                        }
+                    })
+
+                # Use assumed session
+                iam_client = assume_result["session"].client('iam')
+                session_info = {
+                    "cross_account": True,
+                    "customer_account_id": customer_account_id,
+                    "assumed_role": assume_result["role_arn"],
+                    "role_assumption_success": True
+                }
 
             # Check if role already exists
             try:
-                existing_role = self.iam_client.get_role(RoleName=role_name)
-                return f"Error: Role '{role_name}' already exists with ARN: {existing_role['Role']['Arn']}"
+                existing_role = iam_client.get_role(RoleName=role_name)
+                # Optimization: If role exists, return its details and do not recreate or attach policies
+                return json.dumps({
+                    "status": "already_exists",
+                    "role_name": role_name,
+                    "role_arn": existing_role['Role']['Arn'],
+                    "role_details": existing_role['Role'],
+                    "cross_account_info": session_info,
+                    "message": f"Role '{role_name}' already exists in account {customer_account_id if customer_account_id else 'local'}"
+                }, indent=2)
             except ClientError as e:
                 if e.response['Error']['Code'] != 'NoSuchEntity':
-                    raise e
+                    return json.dumps({
+                        "error": f"Error checking existing role: {str(e)}",
+                        "cross_account_info": session_info
+                    })
 
             # Create the role
             create_role_params = {
                 'RoleName': role_name,
                 'AssumeRolePolicyDocument': json.dumps(trust_policy),
-                'Path': path,
+                'Path': '/',
                 'MaxSessionDuration': max_session_duration
             }
 
             if description:
                 create_role_params['Description'] = description
 
-            if tags:
-                create_role_params['Tags'] = tags
-
-            role_response = self.iam_client.create_role(**create_role_params)
+            role_response = iam_client.create_role(**create_role_params)
             role_arn = role_response['Role']['Arn']
 
-            self.logger.info(f"Successfully created role: {role_name}")
+            self.logger.info(f"Successfully created role: {role_name} in account {customer_account_id if customer_account_id else 'local'}")
 
             # Attach permission policies
             attached_policies = []
             for i, policy in enumerate(permission_policies):
                 policy_name = f"{role_name}Policy{i+1}"
 
-                # Create inline policy
                 try:
-                    self.iam_client.put_role_policy(
+                    iam_client.put_role_policy(
                         RoleName=role_name,
                         PolicyName=policy_name,
                         PolicyDocument=json.dumps(policy)
@@ -121,7 +215,6 @@ class AWSRoleCreator(BaseTool):
 
                 except ClientError as e:
                     self.logger.error(f"Failed to attach policy {policy_name}: {e}")
-                    # Continue with other policies even if one fails
                     continue
 
             # Prepare result summary
@@ -130,7 +223,10 @@ class AWSRoleCreator(BaseTool):
                 "role_name": role_name,
                 "role_arn": role_arn,
                 "attached_policies": attached_policies,
-                "message": f"Successfully created role '{role_name}' with {len(attached_policies)} policies"
+                "total_policies_attached": len(attached_policies),
+                "message": f"Successfully created role '{role_name}' with {len(attached_policies)} policies",
+                "cross_account_info": session_info,
+                "created_in_account": customer_account_id if customer_account_id else "local"
             }
 
             return json.dumps(result, indent=2)
@@ -138,12 +234,18 @@ class AWSRoleCreator(BaseTool):
         except ClientError as e:
             error_msg = f"AWS IAM Error: {e.response['Error']['Code']} - {e.response['Error']['Message']}"
             self.logger.error(error_msg)
-            return f"Error creating role: {error_msg}"
+            return json.dumps({
+                "error": error_msg,
+                "cross_account_info": session_info if 'session_info' in locals() else {"cross_account": False}
+            })
 
         except Exception as e:
             error_msg = f"Unexpected error: {str(e)}"
             self.logger.error(error_msg)
-            return f"Error creating role: {error_msg}"
+            return json.dumps({
+                "error": error_msg,
+                "cross_account_info": session_info if 'session_info' in locals() else {"cross_account": False}
+            })
 
     def create_least_privilege_role(self,
                                   role_name: str,
@@ -199,6 +301,92 @@ class AWSRoleCreator(BaseTool):
             permission_policies=[permission_policy],
             description=f"Least-privilege role created from CloudTrail analysis"
         )
+
+    def create_least_privilege_role_from_events(self,
+                                              role_name: str,
+                                              cloudtrail_events: List[Dict[str, Any]],
+                                              customer_account_id: Optional[str] = None,
+                                              cross_account_role_name: str = "CyberArkRoleSCA-6c116dd0-9300-11f0-bd68-0e66c6d684e1",
+                                              external_id: Optional[str] = None) -> str:
+        """
+        Create a least-privilege role based on analyzed CloudTrail events for cross-account deployment.
+
+        Args:
+            role_name: Name of the role to create
+            cloudtrail_events: List of CloudTrail events to analyze
+            customer_account_id: Customer AWS account ID for cross-account operations
+            cross_account_role_name: Role name to assume in customer account
+            external_id: External ID for cross-account role assumption
+
+        Returns:
+            JSON string with creation results
+        """
+        try:
+            # Analyze CloudTrail events to extract required permissions
+            actions = set()
+            resources = set()
+
+            for event in cloudtrail_events:
+                if event.get('event_name'):
+                    # Extract service and action from event name
+                    event_name = event['event_name']
+                    if event.get('event_source'):
+                        service = event['event_source'].replace('.amazonaws.com', '')
+                        action = f"{service}:{event_name}"
+                        actions.add(action)
+
+                # Extract resources if available
+                if event.get('resources'):
+                    for resource in event['resources']:
+                        if resource.get('ResourceName'):
+                            resources.add(resource['ResourceName'])
+
+            # If no specific resources found, use wildcard (least secure but functional)
+            if not resources:
+                resources.add("*")
+
+            # Create trust policy (assume role for EC2 and Lambda by default)
+            trust_policy = {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": ["ec2.amazonaws.com", "lambda.amazonaws.com"]
+                        },
+                        "Action": "sts:AssumeRole"
+                    }
+                ]
+            }
+
+            # Create permission policy
+            permission_policy = {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": list(actions) if actions else ["s3:GetObject"],  # Fallback action
+                        "Resource": list(resources)
+                    }
+                ]
+            }
+
+            return self._run(
+                role_name=role_name,
+                trust_policy=trust_policy,
+                permission_policies=[permission_policy],
+                description=f"Least-privilege role created from CloudTrail analysis",
+                customer_account_id=customer_account_id,
+                cross_account_role_name=cross_account_role_name,
+                external_id=external_id
+            )
+
+        except Exception as e:
+            return json.dumps({
+                "error": f"Error creating role from CloudTrail events: {str(e)}",
+                "role_name": role_name,
+                "customer_account_id": customer_account_id
+            })
 
     def validate_policy_syntax(self, policy: Dict[str, Any]) -> bool:
         """

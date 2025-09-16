@@ -13,21 +13,77 @@ load_dotenv()
 class CloudTrailFetcherInput(BaseModel):
     """Input schema for CloudTrail Events Fetcher tool."""
     specific_user: Optional[str] = Field(default=None, description="Specific IAM username to fetch events for (optional)")
+    customer_account_id: Optional[str] = Field(default=None, description="Customer AWS account ID to assume role into")
+    cross_account_role_name: Optional[str] = Field(default="CyberArkRoleSCA-6c116dd0-9300-11f0-bd68-0e66c6d684e1", description="Role name to assume in customer account")
+    external_id: Optional[str] = Field(default=None, description="External ID for cross-account role assumption (optional)")
 
 class CloudTrailEventsFetcher(BaseTool):
     name: str = "CloudTrail Events Fetcher"
     description: str = (
         "REQUIRED FIRST STEP for AWS IAM optimization tasks. This tool fetches comprehensive CloudTrail events "
-        "for ALL AWS IAM users to analyze their actual usage patterns and permissions. "
+        "for ALL AWS IAM users in a customer account by assuming a cross-account role. "
         "Use this BEFORE any IAM role creation or permission analysis. "
         "Returns detailed activity data needed for creating least-privilege custom roles. "
         "Essential for understanding what permissions users actually need based on their activity history."
     )
     args_schema: Type[BaseModel] = CloudTrailFetcherInput
 
-    def _get_all_iam_users(self):
-        """Get all IAM users with pagination"""
-        iam_client = boto3.client('iam', region_name='us-east-1')
+    def _assume_cross_account_role(self, customer_account_id: str, role_name: str, external_id: Optional[str] = None):
+        """Assume a cross-account role and return the assumed role session."""
+        try:
+            # Create STS client
+            sts_client = boto3.client('sts')
+
+            # Build role ARN
+            role_arn = f"arn:aws:iam::{customer_account_id}:role/{role_name}"
+
+            # Prepare assume role parameters
+            assume_role_params = {
+                'RoleArn': role_arn,
+                'RoleSessionName': f'CloudTrailFetcher-{datetime.now().strftime("%Y%m%d%H%M%S")}'
+            }
+
+            # Add external ID if provided
+            if external_id:
+                assume_role_params['ExternalId'] = external_id
+
+            # Assume the role
+            response = sts_client.assume_role(**assume_role_params)
+
+            # Extract credentials
+            credentials = response['Credentials']
+
+            # Create session with assumed role credentials
+            assumed_session = boto3.Session(
+                aws_access_key_id=credentials['AccessKeyId'],
+                aws_secret_access_key=credentials['SecretAccessKey'],
+                aws_session_token=credentials['SessionToken']
+            )
+
+            return {
+                "session": assumed_session,
+                "account_id": customer_account_id,
+                "role_arn": role_arn,
+                "error": None
+            }
+
+        except ClientError as e:
+            role_arn = f"arn:aws:iam::{customer_account_id}:role/{role_name}"
+            error_msg = f"Failed to assume cross-account role {role_arn}: {str(e)}"
+            return {
+                "session": None,
+                "account_id": customer_account_id,
+                "role_arn": role_arn,
+                "error": error_msg
+            }
+
+    def _get_all_iam_users(self, session=None):
+        """Get all IAM users with pagination using provided session or default."""
+        if session:
+            iam_client = session.client('iam', region_name='us-east-1')
+        else:
+            iam_client = boto3.client('iam', region_name='us-east-1')
+
         users = []
 
         try:
@@ -39,9 +95,13 @@ class CloudTrailEventsFetcher(BaseTool):
 
         return {"users": users, "error": None}
 
-    def _get_cloudtrail_events_for_user(self, username: str, start_time: datetime, end_time: datetime, max_events: int = 20):
-        """Get CloudTrail events for a specific user with pagination and event limit"""
-        cloudtrail_client = boto3.client('cloudtrail', region_name='us-east-1')
+    def _get_cloudtrail_events_for_user(self, username: str, start_time: datetime, end_time: datetime, max_events: int = 20, session=None):
+        """Get CloudTrail events for a specific user with pagination and event limit using provided session."""
+        if session:
+            cloudtrail_client = session.client('cloudtrail', region_name='us-east-1')
+        else:
+            cloudtrail_client = boto3.client('cloudtrail', region_name='us-east-1')
+
         all_events = []
 
         try:
@@ -119,7 +179,7 @@ class CloudTrailEventsFetcher(BaseTool):
 
         return {"events": all_events, "error": None}
 
-    def _fetch_all_events_parallel(self, iam_users, start_time, end_time):
+    def _fetch_all_events_parallel(self, iam_users, start_time, end_time, session):
         """Fetch CloudTrail events for all users concurrently."""
         users_data = []
         errors = []
@@ -127,7 +187,7 @@ class CloudTrailEventsFetcher(BaseTool):
 
         def fetch_user_events(user):
             username = user.get("UserName")
-            return username, self._get_cloudtrail_events_for_user(username, start_time, end_time, max_events=50)
+            return username, self._get_cloudtrail_events_for_user(username, start_time, end_time, max_events=50, session=session)
 
         with ThreadPoolExecutor(max_workers=16) as executor:
             future_to_user = {executor.submit(fetch_user_events, user): user for user in iam_users}
@@ -158,7 +218,7 @@ class CloudTrailEventsFetcher(BaseTool):
                     })
         return users_data, errors, total_events
 
-    def _run(self, specific_user: str = None) -> str:
+    def _run(self, specific_user: str = None, customer_account_id: str = None, cross_account_role_name: str = "CyberArkRoleSCA-6c116dd0-9300-11f0-bd68-0e66c6d684e1", external_id: str = None) -> str:
         """Execute the CloudTrail events fetching logic and return JSON."""
         try:
             # Set time range for CloudTrail events (fixed to 1 day)
@@ -186,6 +246,17 @@ class CloudTrailEventsFetcher(BaseTool):
                 "errors": []
             }
 
+            session = None
+
+            # Assume cross-account role if customer_account_id is provided
+            if customer_account_id:
+                assume_role_result = self._assume_cross_account_role(customer_account_id, cross_account_role_name, external_id)
+                if assume_role_result["error"]:
+                    result["errors"].append(assume_role_result["error"])
+                    return json.dumps(result, indent=2)
+                else:
+                    session = assume_role_result["session"]
+
             # Get IAM users
             if specific_user:
                 # Process only specific user, but skip if it's DeploymentUser
@@ -194,7 +265,7 @@ class CloudTrailEventsFetcher(BaseTool):
                 else:
                     users_result = {"users": [{"UserName": specific_user}], "error": None}
             else:
-                users_result = self._get_all_iam_users()
+                users_result = self._get_all_iam_users(session)
                 if users_result["error"] is None:
                     # Filter out DeploymentUser from the list
                     users_result["users"] = [user for user in users_result["users"] if user.get("UserName") != "DeploymentUser"]
@@ -209,7 +280,7 @@ class CloudTrailEventsFetcher(BaseTool):
             # Process all users in parallel instead of sequential processing
             if iam_users:
                 users_data, parallel_errors, total_events = self._fetch_all_events_parallel(
-                    iam_users, start_time, end_time
+                    iam_users, start_time, end_time, session
                 )
 
                 result["users_data"] = users_data

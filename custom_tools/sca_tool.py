@@ -14,6 +14,7 @@ load_dotenv()
 import os
 import requests
 import json
+import time
 
 # Configuration
 SCA_BASE_URL = os.getenv('SCA_BASE_URL', 'https://ady7840.id.cyberark-everest-integdev.cloud')
@@ -26,12 +27,14 @@ SCA_PASSWORD = os.getenv('SCA_PASSWORD', 'YOUR_PASSWORD')
 AUTH_URL = f"{SCA_BASE_URL}/oauth2/token/scadev"
 SCA_POLICY_URL = "https://navi-test-sca.cyberark-everest-integdev.cloud/api/"
 CREATE_POLICY_URL = f"{SCA_POLICY_URL}policies/create-policy"
+RESCAN_URL = f"{SCA_POLICY_URL}cloud/rescan"
+JOB_STATUS_URL = f"{SCA_POLICY_URL}integrations/status"
 
 REQUEST_TIMEOUT_SEC = 30
 
 class SCAToolInput(BaseModel):
     """Input schema for SCA Tool."""
-    action: str = Field(..., description="Action to perform: 'create_policy' or 'create_identity_user'")
+    action: str = Field(..., description="Action to perform: 'create_policy', 'create_identity_user', or 'rescan'")
     policy_payload: Optional[Dict[str, Any]] = Field(default=None, description="Payload for policy creation")
     identity_payload: Optional[Dict[str, Any]] = Field(default=None, description="Payload for identity user creation")
     tenant_endpoint: Optional[str] = Field(default=None, description="Tenant endpoint for identity operations")
@@ -41,9 +44,10 @@ class SCAToolInput(BaseModel):
 class SCATool(BaseTool):
     name: str = "CyberArk SCA Tool"
     description: str = (
-        "Tool for creating policies and identity users in CyberArk SCA. "
-        "Supports two actions: 'create_policy' for creating SCA policies, "
-        "and 'create_identity_user' for creating identity users using CyberArk Identity."
+        "Tool for creating policies, identity users, and rescanning cloud resources in CyberArk SCA. "
+        "Supports three actions: 'create_policy' for creating SCA policies, "
+        "'create_identity_user' for creating identity users using CyberArk Identity, "
+        "and 'rescan' for rescanning cloud resources to get recently created roles."
     )
     args_schema: Type[BaseModel] = SCAToolInput
 
@@ -90,7 +94,7 @@ class SCATool(BaseTool):
             raise
 
     def create_policy(self, policy_payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Create a policy using the provided payload."""
+        """Create a policy using the provided payload and wait for job completion."""
         try:
             token = self.get_sca_access_token()
             headers = {
@@ -100,7 +104,27 @@ class SCATool(BaseTool):
             }
             resp = requests.post(CREATE_POLICY_URL, json=policy_payload, headers=headers, timeout=REQUEST_TIMEOUT_SEC)
             resp.raise_for_status()
-            return resp.json()
+            policy_response = resp.json()
+
+            # Extract job_id from the response
+            job_id = policy_response.get('job_id')
+            if not job_id:
+                self.logger.error("No job_id found in create_policy response")
+                return policy_response
+
+            self.logger.info(f"Policy creation initiated with job_id: {job_id}")
+
+            # Wait for job completion
+            job_status = self.wait_for_job_completion(job_id)
+
+            # Return combined response with policy details and final job status
+            return {
+                "policy_response": policy_response,
+                "job_id": job_id,
+                "final_status": job_status,
+                "success": job_status.get('status', '').lower() in ['success', 'completed']
+            }
+
         except Exception as e:
             self.logger.error(f"Error creating policy: {e}")
             raise
@@ -123,6 +147,96 @@ class SCATool(BaseTool):
             self.logger.error(f"Error creating identity user: {e}")
             raise
 
+    def get_job_status_debug_mode(self, job_id: str) -> Dict[str, Any]:
+        """Get job status in debug mode."""
+        try:
+            token = self.get_sca_access_token()
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json"
+            }
+            params = {
+                'jobId': job_id,
+                'debug': "true"
+            }
+            resp = requests.get(JOB_STATUS_URL, headers=headers, params=params, timeout=REQUEST_TIMEOUT_SEC)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            self.logger.error(f"Error getting job status: {e}")
+            raise
+
+    def wait_for_job_completion(self, job_id: str, max_wait_time: int = 300, poll_interval: int = 10) -> Dict[str, Any]:
+        """Wait for job completion by polling job status until Success or Failure."""
+        start_time = time.time()
+
+        while time.time() - start_time < max_wait_time:
+            try:
+                status_response = self.get_job_status_debug_mode(job_id)
+                job_status = status_response.get('status', '').lower()
+
+                if job_status == 'success':
+                    self.logger.info(f"Job {job_id} completed successfully")
+                    return status_response
+                elif job_status == 'failure':
+                    self.logger.error(f"Job {job_id} failed")
+                    raise RuntimeError(f"Job {job_id} failed: {status_response}")
+                elif job_status == 'inprogress':
+                    self.logger.info(f"Job {job_id} still in progress")
+                    time.sleep(poll_interval)
+                else:
+                    self.logger.warning(f"Unknown job status: {job_status}")
+                    time.sleep(poll_interval)
+
+            except Exception as e:
+                self.logger.warning(f"Error polling job status for {job_id}: {e}")
+                time.sleep(poll_interval)
+
+        self.logger.warning(f"Job {job_id} polling timed out after {max_wait_time} seconds")
+        final_status = self.get_job_status_debug_mode(job_id)
+        if final_status.get('status', '').lower() == 'failure':
+            raise RuntimeError(f"Job {job_id} failed after timeout: {final_status}")
+        return final_status
+
+    def rescan(self) -> Dict[str, Any]:
+        """Rescan cloud resources to get recently created roles and wait for completion."""
+        try:
+            token = self.get_sca_access_token()
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "cloudProvider": 0,
+                "accountType": "All"
+            }
+            resp = requests.post(RESCAN_URL, json=payload, headers=headers, timeout=REQUEST_TIMEOUT_SEC)
+            resp.raise_for_status()
+            rescan_response = resp.json()
+
+            # Extract job_id from the response
+            job_id = rescan_response.get('jobId')
+            if not job_id:
+                self.logger.error("No job_id found in rescan response")
+                return rescan_response
+
+            self.logger.info(f"Rescan initiated with job_id: {job_id}")
+
+            # Wait for job completion
+            job_status = self.wait_for_job_completion(job_id)
+
+            # Return combined response with rescan details and final job status
+            return {
+                "rescan_response": rescan_response,
+                "job_id": job_id,
+                "final_status": job_status,
+                "success": job_status.get('status', '').lower() in ['success', 'completed']
+            }
+
+        except Exception as e:
+            self.logger.error(f"Error rescanning cloud resources: {e}")
+            raise
+
     def _run(self, action: str, policy_payload: Optional[Dict[str, Any]] = None,
              identity_payload: Optional[Dict[str, Any]] = None,
              tenant_endpoint: Optional[str] = None, service_user_id: Optional[str] = None,
@@ -135,11 +249,14 @@ class SCATool(BaseTool):
             return self.create_policy(policy_payload)
 
         elif action == "create_identity_user":
-            tenant_endpoint,service_user_id,service_password = get_aws_secret()
+            tenant_endpoint, service_user_id, service_password = get_aws_secret()
             return self.create_identity_user(tenant_endpoint, service_user_id, service_password, identity_payload)
 
+        elif action == "rescan":
+            return self.rescan()
+
         else:
-            raise ValueError(f"Unknown action: {action}. Supported actions: 'create_policy', 'create_identity_user'")
+            raise ValueError(f"Unknown action: {action}. Supported actions: 'create_policy', 'create_identity_user', 'rescan'")
 
 def get_aws_secret(secret_name="d6f344b7-5ea6-4351-87c4-8a1141e486a9.integdev.Identity", region_name="us-east-1"):
     """Retrieve a secret from AWS Secrets Manager."""
@@ -208,14 +325,14 @@ def get_aws_secret(secret_name="d6f344b7-5ea6-4351-87c4-8a1141e486a9.integdev.Id
 #     except Exception as e:
 #         print(f"Error: {e}")
 #
-if __name__ == "__main__":
-    sca_tool = SCATool()
-    payload = {
-        "Name": "test_user_1@cyberark.cloud.55567",
-        "Mail": "test_user_1@test.com",
-        "Password": "abcD1234",
-        "InEverybodyRole": True,
-        "InSysAdminRole": False,
-
-    }
-    result = sca_tool._run("create_identity_user", identity_payload=payload)
+# if __name__ == "__main__":
+#     sca_tool = SCATool()
+#     payload = {
+#         "Name": "test_user_1@cyberark.cloud.55567",
+#         "Mail": "test_user_1@test.com",
+#         "Password": "abcD1234",
+#         "InEverybodyRole": True,
+#         "InSysAdminRole": False,
+#
+#     }
+#     result = sca_tool._run("create_identity_user", identity_payload=payload)
