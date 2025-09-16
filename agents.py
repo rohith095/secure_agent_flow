@@ -4,6 +4,7 @@ Agents definition for the secure agent flow crew.
 
 from crewai import Agent
 from config import Config
+from custom_tools.role_fetcher import CloudTrailEventsFetcher
 
 
 class SecureAgentFlowAgents:
@@ -25,6 +26,7 @@ class SecureAgentFlowAgents:
             and configurations to extract detailed information about user roles, their permissions, 
             and access patterns.""",
             verbose=True,
+            tools=[CloudTrailEventsFetcher],
             allow_delegation=False,
             llm=self.llm
         )
