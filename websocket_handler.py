@@ -110,11 +110,11 @@ def send_message_to_connection(connection_id, message):
                 Create a beautiful HTML summary for this AWS IAM analysis task with inline CSS styling:
                 
                 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 20px; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; box-shadow: 0 8px 32px rgba(0,0,0,0.1); margin: 10px 0;">
-                  <h3 style="margin: 0 0 15px 0; font-size: 18px; font-weight: 600; display: flex; align-items: center;">
+                  <h3 style="margin: 0 0 15px 0; font-size: 20px; font-weight: 600; display: flex; align-items: center;">
                     <span style="background: rgba(255,255,255,0.2); border-radius: 50%; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; margin-right: 10px;">🔐</span>
                     AWS IAM Analysis Results
                   </h3>
-                  <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 15px;">
+                  <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 15px; font-size: 16px; line-height: 1.6;">
                     <div style="margin-bottom: 12px;"><strong>🔍 IAM Users Search:</strong> [mention count found]</div>
                     <div style="margin-bottom: 12px;"><strong>👥 Users Found:</strong> [list usernames and activity status]</div>
                     <div style="margin-bottom: 12px;"><strong>📊 CloudTrail Events:</strong> [mention total count analyzed]</div>
@@ -131,11 +131,11 @@ def send_message_to_connection(connection_id, message):
 Create a beautiful HTML summary for this security policy mapping task with inline CSS styling:
 
 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 20px; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; box-shadow: 0 8px 32px rgba(0,0,0,0.1); margin: 10px 0;">
-  <h3 style="margin: 0 0 15px 0; font-size: 18px; font-weight: 600; display: flex; align-items: center;">
+  <h3 style="margin: 0 0 15px 0; font-size: 20px; font-weight: 600; display: flex; align-items: center;">
     <span style="background: rgba(255,255,255,0.2); border-radius: 50%; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; margin-right: 10px;">🛡️</span>
     Security Policy Mapping
   </h3>
-  <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 15px;">
+  <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 15px; font-size: 16px; line-height: 1.6;">
     <div style="margin-bottom: 12px;"><strong>👤 Identity Users Created:</strong> [show names only]</div>
     <div><strong>📋 Policy Details:</strong> [show role, identity, and policy name]</div>
   </div>
@@ -177,7 +177,7 @@ Format: HTML with inline CSS, no explanations.
                     'result': result_data,
                     'timestamp': datetime.now().isoformat()
                 }
-        connection_id = "RDe2BcqQoAMCKiQ="
+        connection_id = "RDxnWfrSoAMCLkw="
         # Send to WebSocket
         apigateway_client.post_to_connection(
             ConnectionId=connection_id,

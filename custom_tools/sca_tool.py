@@ -258,7 +258,7 @@ class SCATool(BaseTool):
                 "type": 'event',
                 "eventType": 'custom1',
                 "eventStatus": 'completed',
-                "content": 'Rescan Completed ...',
+                "content": 'Roles Scan Completed ...',
             }
             send_to_websocket(initial_response)
 
@@ -303,7 +303,7 @@ class SCATool(BaseTool):
                 "type": 'event',
                 "eventType": 'custom1',
                 "eventStatus": 'loading',
-                "content": f'Rescan Started ...',
+                "content": f'Roles Scan Started ...',
             }
             send_to_websocket(initial_response)
             return self.rescan()
