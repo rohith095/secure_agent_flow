@@ -117,7 +117,7 @@ def send_message_to_connection(connection_id, message):
 
                 Format as numbered list with minimal details only.
                 """
-            elif 'Mapping Agent' in agent_name:
+            elif 'Security Policy Creator' in agent_name:
                 prompt = f"""
                 Summarize this mapping task in 2 brief points:
                 1. Created identity users in cyber identity (show names only)
@@ -127,7 +127,7 @@ def send_message_to_connection(connection_id, message):
 
                 Format as numbered list with minimal details only.
                 """
-            elif result_data["eventType"] == "thinking":
+            elif isinstance(result_data,dict) and result_data["eventType"] == "thinking":
                 skip_llm = True
                 ws_message = result_data
             else:
@@ -159,7 +159,7 @@ Format: HTML with inline CSS, no explanations.
                     'result': result_data,
                     'timestamp': datetime.now().isoformat()
                 }
-        connection_id = "RC05ScAzIAMCIBw="
+        connection_id = "RDD0ieN4oAMCEWw="
         # Send to WebSocket
         apigateway_client.post_to_connection(
             ConnectionId=connection_id,
