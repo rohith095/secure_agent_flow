@@ -264,7 +264,7 @@ class CloudTrailEventsFetcher(BaseTool):
         """Execute the CloudTrail events fetching logic and return JSON."""
         try:
             # Set time range for CloudTrail events (fixed to 1 day)
-            hours_back = 24  # 1 hour
+            hours_back = 12  # 1 hour
             end_time = datetime.now()
             start_time = end_time - timedelta(hours=hours_back)
 

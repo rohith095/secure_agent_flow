@@ -177,7 +177,7 @@ Format: HTML with inline CSS, no explanations.
                     'result': result_data,
                     'timestamp': datetime.now().isoformat()
                 }
-        connection_id = "RDaYHeR3IAMCIsA="
+        connection_id = "RDe2BcqQoAMCKiQ="
         # Send to WebSocket
         apigateway_client.post_to_connection(
             ConnectionId=connection_id,
