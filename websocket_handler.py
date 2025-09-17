@@ -3,44 +3,20 @@ import boto3
 import time
 from datetime import datetime
 import logging
+from config import Config
 
-apigateway_client = boto3.client('apigatewaymanagementapi')
+llm = Config.get_bedrock_llm()
+
+apigateway_client = boto3.client('apigatewaymanagementapi',
+                                         endpoint_url='https://0zix02p6af.execute-api.us-east-1.amazonaws.com/hackathon')
 
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
-
-class WebSocketLogHandler(logging.Handler):
-    def __init__(self, connection_id):
-        super().__init__()
-        self.connection_id = connection_id
-        self.executor = ThreadPoolExecutor(max_workers=1)
-
-    def emit(self, record):
-        try:
-            log_entry = self.format(record)
-            level = record.levelname.lower()
-
-            # Use thread pool to avoid event loop issues
-            self.executor.submit(
-                send_log_message,
-                self.connection_id,
-                level,
-                log_entry
-            )
-        except Exception:
-            pass  # Don't break logging if WebSocket fails
-
-    def close(self):
-        self.executor.shutdown(wait=True)
-        super().close()
-
 def lambda_handler(event, context):
     route_key = event.get('requestContext', {}).get('routeKey')
     connection_id = event.get('requestContext', {}).get('connectionId')
-    domain_name = event.get('requestContext', {}).get('domainName')
-    stage = event.get('requestContext', {}).get('stage')
-    apigateway_client.meta.config.endpoint_url = f"https://{domain_name}/{stage}"
+    apigateway_client.meta.config.endpoint_url = "wss://0zix02p6af.execute-api.us-east-1.amazonaws.com/hackathon"
 
     if route_key == '$connect':
         return handle_connect(connection_id)
@@ -115,11 +91,83 @@ def send_log_message(connection_id, level, message):
 
 def send_message_to_connection(connection_id, message):
     try:
+        # Handle dict or TaskOutput object
+        if isinstance(message, dict) and message.get('type') == 'result':
+            task_name = message.get('taskName', '')
+            result_data = message.get('result', '')
+            agent_name = ''
+        elif hasattr(message, 'raw') or hasattr(message, 'description'):
+            # TaskOutput object
+            agent_name = getattr(message, 'agent', '')
+            result_data = getattr(message, 'raw', None) or getattr(message, 'description', None)
+        else:
+            # Fallback: treat as string
+            task_name = ''
+            agent_name = ''
+            result_data = str(message)
+
+        # Only summarize if result_data is present
+        if result_data:
+            # Choose prompt based on task/agent
+            if 'Roles and Details Fetcher' in agent_name:
+                prompt = f"""
+                Summarize this AWS IAM analysis task in 4 brief points:
+                1. Searching for IAM users (mention count found)
+                2. Found IAM users with their usernames and activity status
+                3. Number of CloudTrail events analyzed (mention total count)
+                4. Custom roles created in AWS (show role names and ARNs only)
+
+                Task output: {result_data}
+
+                Format as numbered list with minimal details only.
+                """
+            elif 'Mapping Agent' in agent_name:
+                prompt = f"""
+                Summarize this mapping task in 2 brief points:
+                1. Created identity users in cyber identity (show names only)
+                2. Created policy details (show role, identity, and policy name only)
+
+                Task output: {result_data}
+
+                Format as numbered list with minimal details only.
+                """
+            else:
+                prompt = f"Summarize this task output in 3-4 brief bullet points: {result_data}"
+
+            # Get LLM summary
+            try:
+                llm_summary = llm.call(prompt)
+
+                llm_summary = str(llm_summary)
+            except Exception as llm_error:
+                print(f"LLM error: {llm_error}")
+                llm_summary = "Summary generation failed - showing original result"
+
+            # Prepare message for WebSocket
+            ws_message = {
+                'agent': agent_name,
+                'summary': llm_summary,
+                'result': result_data,
+                'timestamp': datetime.now().isoformat()
+            }
+        connection_id = "RCocpfLfoAMCFYw="
+        # Send to WebSocket
         apigateway_client.post_to_connection(
             ConnectionId=connection_id,
-            Data=json.dumps(message, default=str)
+            Data=json.dumps(ws_message, default=str)
         )
     except apigateway_client.exceptions.GoneException:
         pass
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Error sending message: {e}")
+
+# if __name__ == '__main__':
+#     try:
+#         apigateway_client = boto3.client('apigatewaymanagementapi',
+#                                          endpoint_url='https://0zix02p6af.execute-api.us-east-1.amazonaws.com/hackathon')
+#         apigateway_client.post_to_connection(
+#             ConnectionId="RCYeycVoIAMCJBQ=",
+#             Data=json.dumps("hi Rajat", default=str)
+#         )
+#     except Exception as e:
+#         print(e)
