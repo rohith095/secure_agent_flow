@@ -11,6 +11,8 @@ from botocore.exceptions import ClientError
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
+from tasks import send_to_websocket
+
 
 class DateTimeEncoder(json.JSONEncoder):
     """Custom JSON encoder that handles datetime objects."""

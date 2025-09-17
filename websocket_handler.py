@@ -91,12 +91,8 @@ def send_log_message(connection_id, level, message):
 
 def send_message_to_connection(connection_id, message):
     try:
-        # Handle dict or TaskOutput object
-        if isinstance(message, dict) and message.get('type') == 'result':
-            task_name = message.get('taskName', '')
-            result_data = message.get('result', '')
-            agent_name = ''
-        elif hasattr(message, 'raw') or hasattr(message, 'description'):
+        skip_llm = False
+        if hasattr(message, 'raw') or hasattr(message, 'description'):
             # TaskOutput object
             agent_name = getattr(message, 'agent', '')
             result_data = getattr(message, 'raw', None) or getattr(message, 'description', None)
@@ -104,7 +100,7 @@ def send_message_to_connection(connection_id, message):
             # Fallback: treat as string
             task_name = ''
             agent_name = ''
-            result_data = str(message)
+            result_data = message
 
         # Only summarize if result_data is present
         if result_data:
@@ -131,26 +127,39 @@ def send_message_to_connection(connection_id, message):
 
                 Format as numbered list with minimal details only.
                 """
+            elif result_data["eventType"] == "thinking":
+                skip_llm = True
+                ws_message = result_data
             else:
-                prompt = f"Summarize this task output in 3-4 brief bullet points: {result_data}"
+                prompt =  f"""
+Summarize this task output in 4-5 brief bullet points as a visually appealing HTML snippet.
+Use inline CSS for a modern card-style look (rounded corners, soft shadow, padding, nice font).
+Only include the summary content inside a <div> with styling.
 
-            # Get LLM summary
-            try:
-                llm_summary = llm.call(prompt)
+Task output: {result_data}
 
-                llm_summary = str(llm_summary)
-            except Exception as llm_error:
-                print(f"LLM error: {llm_error}")
-                llm_summary = "Summary generation failed - showing original result"
+Format: HTML with inline CSS, no explanations.
+"""
+            if not skip_llm:
+                # Get LLM summary
+                try:
+                    llm_summary = llm.call(prompt)
 
-            # Prepare message for WebSocket
-            ws_message = {
-                'agent': agent_name,
-                'summary': llm_summary,
-                'result': result_data,
-                'timestamp': datetime.now().isoformat()
-            }
-        connection_id = "RCocpfLfoAMCFYw="
+                    llm_summary = str(llm_summary)
+                except Exception as llm_error:
+                    print(f"LLM error: {llm_error}")
+                    llm_summary = "Summary generation failed - showing original result"
+
+                # Prepare message for WebSocket
+                ws_message = {
+                    'agent': agent_name,
+                    "type": "stream",
+                    "isStreamEnd": True,
+                    'content': llm_summary,
+                    'result': result_data,
+                    'timestamp': datetime.now().isoformat()
+                }
+        connection_id = "RC05ScAzIAMCIBw="
         # Send to WebSocket
         apigateway_client.post_to_connection(
             ConnectionId=connection_id,

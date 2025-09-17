@@ -10,6 +10,8 @@ from typing import Any, Dict, Type, Optional
 import logging
 from crewai.tools import BaseTool
 
+from tasks import send_to_websocket
+
 load_dotenv()
 import os
 import requests
@@ -201,6 +203,7 @@ class SCATool(BaseTool):
 
     def rescan(self) -> Dict[str, Any]:
         """Rescan cloud resources to get recently created roles and wait for completion."""
+
         try:
             token = self.get_sca_access_token()
             headers = {

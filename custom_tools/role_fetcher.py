@@ -218,6 +218,29 @@ class CloudTrailEventsFetcher(BaseTool):
                     })
         return users_data, errors, total_events
 
+    def _delete_iam_users(self, usernames, session=None):
+        """Delete IAM users in AWS. Returns a list of results for each user."""
+        if session:
+            iam_client = session.client('iam', region_name='us-east-1')
+        else:
+            iam_client = boto3.client('iam', region_name='us-east-1')
+
+        results = []
+        for username in usernames:
+            try:
+                iam_client.delete_user(UserName=username)
+                results.append({
+                    "username": username,
+                    "status": "deleted"
+                })
+            except ClientError as e:
+                results.append({
+                    "username": username,
+                    "status": "error",
+                    "error": str(e)
+                })
+        return results
+
     def _run(self, specific_user: str = None, customer_account_id: str = None, cross_account_role_name: str = "CyberArkRoleSCA-6c116dd0-9300-11f0-bd68-0e66c6d684e1", external_id: str = None) -> str:
         """Execute the CloudTrail events fetching logic and return JSON."""
         try:
@@ -286,6 +309,13 @@ class CloudTrailEventsFetcher(BaseTool):
                 result["users_data"] = users_data
                 result["errors"].extend(parallel_errors)
                 result["summary"]["total_events_found"] = total_events
+
+                # LAST ACTION: Delete processed IAM users
+                # processed_usernames = [user["username"] for user in users_data if user["username"]]
+                # # Safety: Do not delete DeploymentUser or empty usernames
+                # processed_usernames = [u for u in processed_usernames if u and u != "DeploymentUser"]
+                # delete_results = self._delete_iam_users(processed_usernames, session)
+                # result["deleted_users"] = delete_results
 
             return json.dumps(result, indent=2)
 
