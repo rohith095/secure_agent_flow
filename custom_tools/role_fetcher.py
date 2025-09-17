@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from tasks import send_to_websocket
+
 load_dotenv()
 
 class CloudTrailFetcherInput(BaseModel):
@@ -189,6 +191,15 @@ class CloudTrailEventsFetcher(BaseTool):
             username = user.get("UserName")
             return username, self._get_cloudtrail_events_for_user(username, start_time, end_time, max_events=50, session=session)
 
+        initial_response = {
+            "messageIdRef": 13,
+            "type": 'event',
+            "eventType": 'generating',
+            "eventStatus": 'loading',
+            "content": 'Getting CloudTrail events ...',
+        }
+        send_to_websocket(initial_response)
+
         with ThreadPoolExecutor(max_workers=16) as executor:
             future_to_user = {executor.submit(fetch_user_events, user): user for user in iam_users}
             for future in as_completed(future_to_user):
@@ -216,6 +227,14 @@ class CloudTrailEventsFetcher(BaseTool):
                         "events": [],
                         "error": str(exc)
                     })
+        initial_response = {
+            "messageIdRef": 13,
+            "type": 'event',
+            "eventType": 'generating',
+            "eventStatus": 'completed',
+            "content": 'Getting CloudTrail events ...',
+        }
+        send_to_websocket(initial_response)
         return users_data, errors, total_events
 
     def _delete_iam_users(self, usernames, session=None):
@@ -288,7 +307,23 @@ class CloudTrailEventsFetcher(BaseTool):
                 else:
                     users_result = {"users": [{"UserName": specific_user}], "error": None}
             else:
+                initial_response = {
+                    "messageIdRef": 12,
+                    "type": 'event',
+                    "eventType": 'processing',
+                    "eventStatus": 'loading',
+                    "content": 'Getting AWS IAM Users ...',
+                }
+                send_to_websocket(initial_response)
                 users_result = self._get_all_iam_users(session)
+                initial_response = {
+                    "messageIdRef": 12,
+                    "type": 'event',
+                    "eventType": 'processing',
+                    "eventStatus": 'completed',
+                    "content": 'Getting AWS IAM Users ...',
+                }
+                send_to_websocket(initial_response)
                 if users_result["error"] is None:
                     # Filter out DeploymentUser from the list
                     users_result["users"] = [user for user in users_result["users"] if user.get("UserName") != "DeploymentUser"]

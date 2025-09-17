@@ -107,27 +107,45 @@ def send_message_to_connection(connection_id, message):
             # Choose prompt based on task/agent
             if 'Roles and Details Fetcher' in agent_name:
                 prompt = f"""
-                Summarize this AWS IAM analysis task in 4 brief points:
-                1. Searching for IAM users (mention count found)
-                2. Found IAM users with their usernames and activity status
-                3. Number of CloudTrail events analyzed (mention total count)
-                4. Custom roles created in AWS (show role names and ARNs only)
-
+                Create a beautiful HTML summary for this AWS IAM analysis task with inline CSS styling:
+                
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 20px; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; box-shadow: 0 8px 32px rgba(0,0,0,0.1); margin: 10px 0;">
+                  <h3 style="margin: 0 0 15px 0; font-size: 18px; font-weight: 600; display: flex; align-items: center;">
+                    <span style="background: rgba(255,255,255,0.2); border-radius: 50%; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; margin-right: 10px;">🔐</span>
+                    AWS IAM Analysis Results
+                  </h3>
+                  <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 15px;">
+                    <div style="margin-bottom: 12px;"><strong>🔍 IAM Users Search:</strong> [mention count found]</div>
+                    <div style="margin-bottom: 12px;"><strong>👥 Users Found:</strong> [list usernames and activity status]</div>
+                    <div style="margin-bottom: 12px;"><strong>📊 CloudTrail Events:</strong> [mention total count analyzed]</div>
+                    <div><strong>🎭 Custom Roles:</strong> [show role names and ARNs]</div>
+                  </div>
+                </div>
+                
                 Task output: {result_data}
-
-                Format as numbered list with minimal details only.
+                
+                Generate only the HTML with actual data filled in, no explanations.
                 """
             elif 'Security Policy Creator' in agent_name:
                 prompt = f"""
-                Summarize this mapping task in 2 brief points:
-                1. Created identity users in cyber identity (show names only)
-                2. Created policy details (show role, identity, and policy name only)
+Create a beautiful HTML summary for this security policy mapping task with inline CSS styling:
 
-                Task output: {result_data}
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 20px; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; box-shadow: 0 8px 32px rgba(0,0,0,0.1); margin: 10px 0;">
+  <h3 style="margin: 0 0 15px 0; font-size: 18px; font-weight: 600; display: flex; align-items: center;">
+    <span style="background: rgba(255,255,255,0.2); border-radius: 50%; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; margin-right: 10px;">🛡️</span>
+    Security Policy Mapping
+  </h3>
+  <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 15px;">
+    <div style="margin-bottom: 12px;"><strong>👤 Identity Users Created:</strong> [show names only]</div>
+    <div><strong>📋 Policy Details:</strong> [show role, identity, and policy name]</div>
+  </div>
+</div>
 
-                Format as numbered list with minimal details only.
-                """
-            elif isinstance(result_data,dict) and result_data["eventType"] == "thinking":
+Task output: {result_data}
+
+Generate only the HTML with actual data filled in, no explanations.
+"""
+            elif isinstance(result_data,dict) and result_data["eventType"] in ["thinking", "completed", "processing", "searching","generating", "error", "custom1", "custom2", "custom3"]:
                 skip_llm = True
                 ws_message = result_data
             else:
@@ -159,7 +177,7 @@ Format: HTML with inline CSS, no explanations.
                     'result': result_data,
                     'timestamp': datetime.now().isoformat()
                 }
-        connection_id = "RDD0ieN4oAMCEWw="
+        connection_id = "RDaYHeR3IAMCIsA="
         # Send to WebSocket
         apigateway_client.post_to_connection(
             ConnectionId=connection_id,

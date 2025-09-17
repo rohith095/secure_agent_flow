@@ -128,6 +128,15 @@ class AWSRoleCreator(BaseTool):
         Create an AWS IAM custom role with specified policies in customer account via cross-account access.
         """
         try:
+            initial_response = {
+                "messageIdRef": 20,
+                "type": 'event',
+                "eventType": 'completed',
+                "eventStatus": 'loading',
+                "content": 'Creating AWS IAM Custom Roles ...',
+            }
+            send_to_websocket(initial_response)
+
             # Validate inputs
             if not role_name:
                 return json.dumps({"error": "Role name is required"})
@@ -256,6 +265,15 @@ class AWSRoleCreator(BaseTool):
                 "error": error_msg,
                 "cross_account_info": session_info if 'session_info' in locals() else {"cross_account": False}
             })
+        finally:
+            initial_response = {
+                "messageIdRef": 20,
+                "type": 'event',
+                "eventType": 'completed',
+                "eventStatus": 'completed',
+                "content": 'Creating AWS IAM Custom Roles ...',
+            }
+            send_to_websocket(initial_response)
 
     def create_least_privilege_role(self,
                                   role_name: str,
