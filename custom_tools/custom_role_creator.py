@@ -11,11 +11,10 @@ from botocore.exceptions import ClientError
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from tasks import send_to_websocket
-
 
 class DateTimeEncoder(json.JSONEncoder):
     """Custom JSON encoder that handles datetime objects."""
+
     def default(self, obj):
         if isinstance(obj, datetime):
             return obj.isoformat()
@@ -30,7 +29,8 @@ class AWSRoleCreatorInput(BaseModel):
     description: Optional[str] = Field(default=None, description="Description for the role")
     max_session_duration: int = Field(default=3600, description="Maximum session duration in seconds")
     customer_account_id: Optional[str] = Field(default=None, description="Customer AWS account ID to assume role into")
-    cross_account_role_name: Optional[str] = Field(default="CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923", description="Role name to assume in customer account")
+    cross_account_role_name: Optional[str] = Field(default="CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923",
+                                                   description="Role name to assume in customer account")
     external_id: Optional[str] = Field(default=None, description="External ID for cross-account role assumption")
 
 
@@ -135,7 +135,6 @@ class AWSRoleCreator(BaseTool):
                 "eventStatus": 'loading',
                 "content": 'Creating AWS IAM Custom Roles ...',
             }
-            send_to_websocket(initial_response)
 
             # Validate inputs
             if not role_name:
@@ -149,10 +148,12 @@ class AWSRoleCreator(BaseTool):
 
             # Validate and fix MaxSessionDuration - AWS minimum is 3600 seconds (1 hour)
             if max_session_duration < 3600:
-                self.logger.warning(f"MaxSessionDuration {max_session_duration} is below AWS minimum of 3600 seconds. Setting to 3600.")
+                self.logger.warning(
+                    f"MaxSessionDuration {max_session_duration} is below AWS minimum of 3600 seconds. Setting to 3600.")
                 max_session_duration = 3600
             elif max_session_duration > 43200:  # AWS maximum is 12 hours
-                self.logger.warning(f"MaxSessionDuration {max_session_duration} is above AWS maximum of 43200 seconds. Setting to 43200.")
+                self.logger.warning(
+                    f"MaxSessionDuration {max_session_duration} is above AWS maximum of 43200 seconds. Setting to 43200.")
                 max_session_duration = 43200
 
             # Initialize IAM client (default or cross-account)
@@ -216,12 +217,13 @@ class AWSRoleCreator(BaseTool):
             role_response = iam_client.create_role(**create_role_params)
             role_arn = role_response['Role']['Arn']
 
-            self.logger.info(f"Successfully created role: {role_name} in account {customer_account_id if customer_account_id else 'local'}")
+            self.logger.info(
+                f"Successfully created role: {role_name} in account {customer_account_id if customer_account_id else 'local'}")
 
             # Attach permission policies
             attached_policies = []
             for i, policy in enumerate(permission_policies):
-                policy_name = f"{role_name}Policy{i+1}"
+                policy_name = f"{role_name}Policy{i + 1}"
 
                 try:
                     iam_client.put_role_policy(
@@ -265,22 +267,13 @@ class AWSRoleCreator(BaseTool):
                 "error": error_msg,
                 "cross_account_info": session_info if 'session_info' in locals() else {"cross_account": False}
             })
-        finally:
-            initial_response = {
-                "messageIdRef": 20,
-                "type": 'event',
-                "eventType": 'completed',
-                "eventStatus": 'completed',
-                "content": 'Creating AWS IAM Custom Roles ...',
-            }
-            send_to_websocket(initial_response)
 
     def create_least_privilege_role(self,
-                                  role_name: str,
-                                  service_principals: List[str],
-                                  actions: List[str],
-                                  resources: List[str],
-                                  conditions: Optional[Dict[str, Any]] = None) -> str:
+                                    role_name: str,
+                                    service_principals: List[str],
+                                    actions: List[str],
+                                    resources: List[str],
+                                    conditions: Optional[Dict[str, Any]] = None) -> str:
         """
         Helper method to create a least-privilege role based on analyzed CloudTrail events.
 
@@ -331,11 +324,11 @@ class AWSRoleCreator(BaseTool):
         )
 
     def create_least_privilege_role_from_events(self,
-                                              role_name: str,
-                                              cloudtrail_events: List[Dict[str, Any]],
-                                              customer_account_id: Optional[str] = None,
-                                              cross_account_role_name: str = "CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923",
-                                              external_id: Optional[str] = None) -> str:
+                                                role_name: str,
+                                                cloudtrail_events: List[Dict[str, Any]],
+                                                customer_account_id: Optional[str] = None,
+                                                cross_account_role_name: str = "CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923",
+                                                external_id: Optional[str] = None) -> str:
         """
         Create a least-privilege role based on analyzed CloudTrail events for cross-account deployment.
 

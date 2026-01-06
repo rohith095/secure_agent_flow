@@ -5,7 +5,7 @@ import os
 
 from crewai import Crew, Process
 from agents import SecureAgentFlowAgents
-from tasks import SecureAgentFlowTasks, send_to_websocket
+from tasks import SecureAgentFlowTasks
 
 
 class SecureAgentFlowCrew:
@@ -56,15 +56,6 @@ class SecureAgentFlowCrew:
         generate_payload_task.context = [fetch_task]
         policy_task.context = [fetch_task, generate_payload_task]
 
-        initial_response = {
-          "messageIdRef": 11,
-          "type": 'event',
-          "eventType": 'thinking',
-          "eventStatus": 'loading',
-          "content": 'Processing your request...',
-        }
-        send_to_websocket(initial_response)
-        # Create and configure the crew
         crew = Crew(
             agents=[roles_fetcher, payload_generator, policy_creator],
             tasks=[fetch_task, generate_payload_task, policy_task],
@@ -77,16 +68,7 @@ class SecureAgentFlowCrew:
         # Execute the workflow
         try:
             result = crew.kickoff()
-            second_response = {
-                "messageIdRef": 11,
-                "type": 'event',
-                "eventType": 'thinking',
-                "eventStatus": 'completed',
-                "content": 'Processed your request...',
-            }
-            # send_to_websocket(second_response)
-            #
-            # send_to_websocket(result)
+
             return {
                 "success": True,
                 "result": result,
@@ -144,7 +126,6 @@ class SecureAgentFlowCrew:
 
         try:
             result = crew.kickoff()
-            send_to_websocket(result)
             return {
                 "success": True,
                 "result": result,

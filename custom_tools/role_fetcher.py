@@ -8,16 +8,19 @@ from datetime import datetime, timedelta
 from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from tasks import send_to_websocket
-
 load_dotenv()
+
 
 class CloudTrailFetcherInput(BaseModel):
     """Input schema for CloudTrail Events Fetcher tool."""
-    specific_user: Optional[str] = Field(default=None, description="Specific IAM username to fetch events for (optional)")
+    specific_user: Optional[str] = Field(default=None,
+                                         description="Specific IAM username to fetch events for (optional)")
     customer_account_id: Optional[str] = Field(default=None, description="Customer AWS account ID to assume role into")
-    cross_account_role_name: Optional[str] = Field(default="CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923", description="Role name to assume in customer account")
-    external_id: Optional[str] = Field(default=None, description="External ID for cross-account role assumption (optional)")
+    cross_account_role_name: Optional[str] = Field(default="CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923",
+                                                   description="Role name to assume in customer account")
+    external_id: Optional[str] = Field(default=None,
+                                       description="External ID for cross-account role assumption (optional)")
+
 
 class CloudTrailEventsFetcher(BaseTool):
     name: str = "CloudTrail Events Fetcher"
@@ -97,7 +100,8 @@ class CloudTrailEventsFetcher(BaseTool):
 
         return {"users": users, "error": None}
 
-    def _get_cloudtrail_events_for_user(self, username: str, start_time: datetime, end_time: datetime, max_events: int = 20, session=None):
+    def _get_cloudtrail_events_for_user(self, username: str, start_time: datetime, end_time: datetime,
+                                        max_events: int = 20, session=None):
         """Get CloudTrail events for a specific user with pagination and event limit using provided session."""
         if session:
             cloudtrail_client = session.client('cloudtrail', region_name='us-east-1')
@@ -189,7 +193,8 @@ class CloudTrailEventsFetcher(BaseTool):
 
         def fetch_user_events(user):
             username = user.get("UserName")
-            return username, self._get_cloudtrail_events_for_user(username, start_time, end_time, max_events=50, session=session)
+            return username, self._get_cloudtrail_events_for_user(username, start_time, end_time, max_events=50,
+                                                                  session=session)
 
         initial_response = {
             "messageIdRef": 13,
@@ -198,7 +203,6 @@ class CloudTrailEventsFetcher(BaseTool):
             "eventStatus": 'loading',
             "content": 'Getting CloudTrail events ...',
         }
-        send_to_websocket(initial_response)
 
         with ThreadPoolExecutor(max_workers=16) as executor:
             future_to_user = {executor.submit(fetch_user_events, user): user for user in iam_users}
@@ -227,14 +231,7 @@ class CloudTrailEventsFetcher(BaseTool):
                         "events": [],
                         "error": str(exc)
                     })
-        initial_response = {
-            "messageIdRef": 13,
-            "type": 'event',
-            "eventType": 'generating',
-            "eventStatus": 'completed',
-            "content": 'Getting CloudTrail events ...',
-        }
-        send_to_websocket(initial_response)
+
         return users_data, errors, total_events
 
     def _delete_iam_users(self, usernames, session=None):
@@ -260,7 +257,9 @@ class CloudTrailEventsFetcher(BaseTool):
                 })
         return results
 
-    def _run(self, specific_user: str = None, customer_account_id: str = None, cross_account_role_name: str = "CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923", external_id: str = None) -> str:
+    def _run(self, specific_user: str = None, customer_account_id: str = None,
+             cross_account_role_name: str = "CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923",
+             external_id: str = None) -> str:
         """Execute the CloudTrail events fetching logic and return JSON."""
         try:
             # Set time range for CloudTrail events (fixed to 1 day)
@@ -292,7 +291,8 @@ class CloudTrailEventsFetcher(BaseTool):
 
             # Assume cross-account role if customer_account_id is provided
             if customer_account_id:
-                assume_role_result = self._assume_cross_account_role(customer_account_id, cross_account_role_name, external_id)
+                assume_role_result = self._assume_cross_account_role(customer_account_id, cross_account_role_name,
+                                                                     external_id)
                 if assume_role_result["error"]:
                     result["errors"].append(assume_role_result["error"])
                     return json.dumps(result, indent=2)
@@ -307,14 +307,6 @@ class CloudTrailEventsFetcher(BaseTool):
                 else:
                     users_result = {"users": [{"UserName": specific_user}], "error": None}
             else:
-                initial_response = {
-                    "messageIdRef": 12,
-                    "type": 'event',
-                    "eventType": 'processing',
-                    "eventStatus": 'loading',
-                    "content": 'Getting AWS IAM Users ...',
-                }
-                send_to_websocket(initial_response)
                 users_result = self._get_all_iam_users(session)
                 initial_response = {
                     "messageIdRef": 12,
@@ -323,10 +315,10 @@ class CloudTrailEventsFetcher(BaseTool):
                     "eventStatus": 'completed',
                     "content": 'Getting AWS IAM Users ...',
                 }
-                send_to_websocket(initial_response)
                 if users_result["error"] is None:
                     # Filter out DeploymentUser from the list
-                    users_result["users"] = [user for user in users_result["users"] if user.get("UserName") != "DeploymentUser"]
+                    users_result["users"] = [user for user in users_result["users"] if
+                                             user.get("UserName") != "DeploymentUser"]
 
             if users_result["error"]:
                 result["errors"].append(users_result["error"])
@@ -345,13 +337,6 @@ class CloudTrailEventsFetcher(BaseTool):
                 result["errors"].extend(parallel_errors)
                 result["summary"]["total_events_found"] = total_events
 
-                # LAST ACTION: Delete processed IAM users
-                # processed_usernames = [user["username"] for user in users_data if user["username"]]
-                # # Safety: Do not delete DeploymentUser or empty usernames
-                # processed_usernames = [u for u in processed_usernames if u and u != "DeploymentUser"]
-                # delete_results = self._delete_iam_users(processed_usernames, session)
-                # result["deleted_users"] = delete_results
-
             return json.dumps(result, indent=2)
 
         except Exception as e:
@@ -365,7 +350,6 @@ class CloudTrailEventsFetcher(BaseTool):
                 "users_data": []
             }
             return json.dumps(error_result, indent=2)
-
 
 # if __name__ == "__main__":
 #     tool = CloudTrailEventsFetcher()

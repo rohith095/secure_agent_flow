@@ -5,15 +5,6 @@ import os
 
 from crewai import Task
 
-from websocket_handler import send_message_to_connection
-
-
-def send_to_websocket(message):
-    """Placeholder function to send messages to a WebSocket."""
-    # Implement WebSocket sending logic here
-    send_message_to_connection(connection_id=os.environ['WEBSOCKET_CONNECTION_ID'], message=message)
-    print(f"WebSocket message: {message}")
-
 
 class SecureAgentFlowTasks:
     """Class containing all tasks for the secure agent flow crew."""
@@ -103,8 +94,7 @@ class SecureAgentFlowTasks:
                    }
                  }
 
-            Format: Structured JSON report with actionable recommendations, cross-account details, and CREATED_CUSTOM_ROLES section for policy creation""",
-            callback=send_to_websocket
+            Format: Structured JSON report with actionable recommendations, cross-account details, and CREATED_CUSTOM_ROLES section for policy creation"""
         )
 
 
@@ -195,8 +185,7 @@ Example format:
   }
 }
 
-If multiple IAM users exist, provide multiple complete JSON objects separated by newlines.""",
-            callback=send_to_websocket
+If multiple IAM users exist, provide multiple complete JSON objects separated by newlines."""
         )
 
     def create_mapping_task(self, agent):
@@ -234,8 +223,7 @@ If multiple IAM users exist, provide multiple complete JSON objects separated by
             6. Permission optimization recommendations
             7. Cross-role dependency mapping
             
-            Format: Structured diagrams, matrices, and analysis report""",
-            callback=send_to_websocket
+            Format: Structured diagrams, matrices, and analysis report"""
 
         )
 
@@ -272,9 +260,7 @@ If multiple IAM users exist, provide multiple complete JSON objects separated by
             6. Policy creation roadmap
             7. Data quality validation report
             
-            Format: Structured templates and validated datasets ready for policy creation""",
-            callback=send_to_websocket
-
+            Format: Structured templates and validated datasets ready for policy creation"""
         )
 
     def create_policy_task(self, agent, policy_requirements="", fetch_context="", customer_account_id=None):
@@ -366,6 +352,5 @@ If multiple IAM users exist, provide multiple complete JSON objects separated by
                - Policy verification status
             8. **Implementation Summary** - Summary of all policies created, verified, and their configurations
             
-            Format: Professional policy documents with clear procedures, responsibilities, and compliance requirements""",
-            callback=send_to_websocket
+            Format: Professional policy documents with clear procedures, responsibilities, and compliance requirements"""
         )

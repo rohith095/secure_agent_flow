@@ -2,13 +2,16 @@ import streamlit as st
 import time
 import json
 import sys
+import os
+from crew_main import SecureAgentFlowCrew
+
 # Page configuration
 st.set_page_config(
     page_title="Security AI architect agent",
     page_icon="🤖",
     layout="wide"
 )
-
+os.environ["WEBSOCKET_CONNECTION_ID"]= "123456"
 # Initialize session state
 if 'activity_log' not in st.session_state:
     st.session_state.activity_log = []
@@ -206,7 +209,7 @@ def run_actual_crewai(prompt, products, log_placeholder):
         # Execute the crew
         # result = crew_inside.kickoff({"prompt": prompt})
 
-        result = crew.run_workflow({"context_input": prompt,"customer_account_id":"371513194691"})
+        result = SecureAgentFlowCrew().run_workflow(context_input=prompt, customer_account_id="371513194691")
 
         # Format the result for display
         formatted_result = {
@@ -237,7 +240,7 @@ def run_actual_crewai(prompt, products, log_placeholder):
 # MAIN UI
 # ==========================
 
-st.title("🤖Security AI Platform")
+st.title("🤖 AI security platform")
 st.markdown("See the complete internal workings of your AI agents in real-time")
 
 # Create two columns
@@ -331,12 +334,4 @@ if st.session_state.result:
 
 # Footer with instructions
 st.markdown("---")
-st.success("""
-**✅ Live Integration Active!**
-
-- The UI is now connected to the knowledge-based CrewAI agent
-- `verbose=True` is enabled to show internal agent thoughts
-- Agent uses knowledge sources: AWS IAM Best Practices & Security Compliance
-- All agent reasoning, tool calls, and observations appear in real-time!
-- Note: Product selection is ignored - the agent analyzes AWS IAM scenarios
-""")
+st.success("""Success""")

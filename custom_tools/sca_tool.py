@@ -10,13 +10,15 @@ from typing import Any, Dict, Type, Optional
 import logging
 from crewai.tools import BaseTool
 
-from tasks import send_to_websocket
-
 load_dotenv()
 import os
 import requests
 import json
 import time
+
+SERVICE_USER_PASSWORD = "-n#x)bt35:YDRcc9&42quuN&U.R;G(T"
+TENANT_END_POINT = "https://abf7588.id.cyberark-everest-integdev.cloud"
+SERVICE_USER_ID = "1444bbdf-13e1-4419-bfc9-b8c63961d177"
 
 # Configuration
 SCA_BASE_URL = os.getenv('SCA_BASE_URL', 'https://abf7588.id.cyberark-everest-integdev.cloud')
@@ -44,8 +46,10 @@ class SCAToolInput(BaseModel):
     service_user_id: Optional[str] = Field(default=None, description="Service user ID for identity operations")
     service_password: Optional[str] = Field(default=None, description="Service password for identity operations")
     session: Optional[Any] = Field(default=None, description="AWS boto3 session for cross-account operations")
-    customer_account_id: Optional[str] = Field(default=None, description="Customer AWS account ID for cross-account role assumption")
-    cross_account_role_name: Optional[str] = Field(default="CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923", description="Role name to assume in customer account")
+    customer_account_id: Optional[str] = Field(default=None,
+                                               description="Customer AWS account ID for cross-account role assumption")
+    cross_account_role_name: Optional[str] = Field(default="CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923",
+                                                   description="Role name to assume in customer account")
     external_id: Optional[str] = Field(default=None, description="External ID for cross-account role assumption")
 
 class SCATool(BaseTool):
@@ -296,10 +300,10 @@ class SCATool(BaseTool):
             get_policy_url = f"{SCA_POLICY_URL}policies/{policy_id}"
             resp = requests.get(get_policy_url, headers=headers, timeout=REQUEST_TIMEOUT_SEC)
             resp.raise_for_status()
-            
+
             policy_details = resp.json()
             self.logger.info(f"Successfully retrieved policy details for policy_id: {policy_id}")
-            
+
             return {
                 "policy_id": policy_id,
                 "policy_details": policy_details,
@@ -341,15 +345,6 @@ class SCATool(BaseTool):
 
             # Wait for job completion
             job_status = self.wait_for_job_completion(job_id)
-
-            initial_response = {
-                "messageIdRef": 14,
-                "type": 'event',
-                "eventType": 'custom1',
-                "eventStatus": 'completed',
-                "content": 'Roles Scan Completed ...',
-            }
-            send_to_websocket(initial_response)
 
             # Return combined response with rescan details and final job status
             return {
@@ -395,38 +390,27 @@ class SCATool(BaseTool):
             return self.get_policy(policy_id)
 
         elif action == "create_identity_user":
-            initial_response = {
-                "messageIdRef": 15,
-                "type": 'event',
-                "eventType": 'custom2',
-                "eventStatus": 'loading',
-                "content": 'Identity users creation Started ...',
-            }
-            send_to_websocket(initial_response)
+
             # Pass the session to get_aws_secret for cross-account operations
             # tenant_endpoint, service_user_id, service_password = get_aws_secret(session=session)
-            tenant_endpoint = "https://abf7588.id.cyberark-everest-integdev.cloud"
-            service_user_id = "1444bbdf-13e1-4419-bfc9-b8c63961d177"
-            service_password = "-n#x)bt35:YDRcc9&42quuN&U.R;G(T"
+            tenant_endpoint = TENANT_END_POINT
+            service_user_id = SERVICE_USER_ID
+            service_password = SERVICE_USER_PASSWORD
             return self.create_identity_user(tenant_endpoint, service_user_id, service_password, identity_payload)
 
         elif action == "rescan":
-            initial_response = {
-                "messageIdRef": 14,
-                "type": 'event',
-                "eventType": 'custom1',
-                "eventStatus": 'loading',
-                "content": f'Roles Scan Started ...',
-            }
-            send_to_websocket(initial_response)
+
             return self.rescan()
 
         else:
-            raise ValueError(f"Unknown action: {action}. Supported actions: 'create_policy', 'create_identity_user', 'rescan', 'get_policy'")
+            raise ValueError(
+                f"Unknown action: {action}. Supported actions: 'create_policy', 'create_identity_user', 'rescan'")
 
-def get_aws_secret(secret_name="b2d786ca-5ee0-4887-95bc-d682d422fdfc.integdev.Identity", region_name="us-east-1", session=None):
+
+def get_aws_secret(secret_name="b2d786ca-5ee0-4887-95bc-d682d422fdfc.integdev.Identity", region_name="us-east-1",
+                   session=None):
     """Retrieve a secret from AWS Secrets Manager using provided session or default."""
-    
+
     # Use provided session or create a new one
     if session:
         client = session.client(
