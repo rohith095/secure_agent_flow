@@ -2,8 +2,6 @@ import streamlit as st
 import time
 import json
 import sys
-from io import StringIO
-import re
 
 # Page configuration
 st.set_page_config(
@@ -37,6 +35,26 @@ class StreamlitLogger:
 
     def flush(self):
         pass
+
+    def isatty(self):
+        """Required method for stdout compatibility"""
+        return False
+
+    def fileno(self):
+        """Required method for stdout compatibility"""
+        return -1
+
+    def readable(self):
+        """Required method for stdout compatibility"""
+        return False
+
+    def writable(self):
+        """Required method for stdout compatibility"""
+        return True
+
+    def seekable(self):
+        """Required method for stdout compatibility"""
+        return False
 
     def parse_and_display(self, text):
         """Parse CrewAI output and categorize it"""
@@ -76,9 +94,9 @@ class StreamlitLogger:
 def format_activity_log():
     """Format activity log with color coding and icons"""
     if not st.session_state.activity_log:
-        return "<div style='padding: 20px; text-align: center; color: #6b7280;'>👋 Waiting for agent activity...</div>"
+        return "👋 Waiting for agent activity..."
 
-    html = "<div style='font-family: monospace; font-size: 13px;'>"
+    output = []
 
     for activity in st.session_state.activity_log:
         # Color coding based on activity type
@@ -98,25 +116,23 @@ def format_activity_log():
         # Clean up the message
         message = activity['message'].replace('<', '&lt;').replace('>', '&gt;')
 
-        html += f"""
-        <div style="background-color: {color['bg']}; 
+        output.append(f"""
+        <p style="background-color: {color['bg']}; 
                     padding: 10px 12px; 
                     margin: 6px 0; 
                     border-radius: 6px; 
                     border-left: 4px solid {color['border']};
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-            <div style="display: flex; align-items: start; gap: 8px;">
-                <span style="font-size: 16px; margin-top: 2px;">{activity['icon']}</span>
-                <div style="flex: 1;">
-                    <div style="color: {color['text']}; font-weight: 500; line-height: 1.5; white-space: pre-wrap;">{message}</div>
-                    <div style="color: {color['text']}; opacity: 0.6; font-size: 11px; margin-top: 4px;">{activity['timestamp']}</div>
-                </div>
-            </div>
-        </div>
-        """
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                    font-family: monospace; 
+                    font-size: 13px;">
+            <span style="font-size: 16px;">{activity['icon']}</span>
+            <span style="color: {color['text']}; font-weight: 500; line-height: 1.5; white-space: pre-wrap;">{message}</span>
+            <br>
+            <span style="color: {color['text']}; opacity: 0.6; font-size: 11px;">{activity['timestamp']}</span>
+        </p>
+        """)
 
-    html += "</div>"
-    return html
+    return "".join(output)
 
 
 def run_crew_with_logging(prompt, products, log_placeholder):
@@ -183,11 +199,8 @@ def run_crew_with_logging(prompt, products, log_placeholder):
 
 def run_actual_crewai(prompt, products, log_placeholder):
     """
-    Integration with actual CrewAI - use this function instead
+    Integration with actual CrewAI - executes the knowledge-based crew
     """
-    from crewai import Agent, Task, Crew
-    import contextlib
-
     st.session_state.activity_log = []
     logger = StreamlitLogger(log_placeholder)
 
@@ -196,62 +209,32 @@ def run_actual_crewai(prompt, products, log_placeholder):
     sys.stdout = logger
 
     try:
-        # Define your agents
-        analyst = Agent(
-            role='Product Analyst',
-            goal='Analyze and compare products',
-            backstory='Expert product analyst with 10 years experience',
-            verbose=True,  # IMPORTANT: Set to True to see agent thoughts
-            allow_delegation=False
-        )
+        # Import the crew from crew_test
+        from ui_test.crew_test import crew_inside
 
-        researcher = Agent(
-            role='Research Specialist',
-            goal='Research product details and market data',
-            backstory='Expert researcher with access to market intelligence',
-            verbose=True,  # IMPORTANT: Set to True to see agent thoughts
-            allow_delegation=False
-        )
+        # Execute the crew
+        result = crew_inside.kickoff()
 
-        # Define tasks
-        analysis_task = Task(
-            description=f"""
-            Analyze these products: {', '.join(products)}
-            Based on this requirement: {prompt}
+        # Format the result for display
+        formatted_result = {
+            "status": "success",
+            "analysis": str(result),
+            "products_analyzed": products,
+            "prompt": prompt,
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
 
-            Provide a detailed comparison covering:
-            - Key features
-            - Pros and cons
-            - Best use cases
-            """,
-            agent=analyst,
-            expected_output="Detailed product analysis"
-        )
-
-        research_task = Task(
-            description=f"""
-            Research additional details about: {', '.join(products)}
-            Find market data, reviews, and specifications
-            """,
-            agent=researcher,
-            expected_output="Research findings"
-        )
-
-        # Create crew
-        crew = Crew(
-            agents=[analyst, researcher],
-            tasks=[analysis_task, research_task],
-            verbose=True  # IMPORTANT: Set to True for detailed output
-        )
-
-        # Execute crew
-        result = crew.kickoff()
-
-        return result
+        return formatted_result
 
     except Exception as e:
         logger.write(f"Error: {str(e)}")
-        return None
+        return {
+            "status": "error",
+            "error": str(e),
+            "products_analyzed": products,
+            "prompt": prompt,
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
     finally:
         # Restore stdout
         sys.stdout = old_stdout
@@ -324,8 +307,8 @@ if submit_button and prompt and "" not in [product1, product2, product3, product
     products = [product1, product2, product3, product4]
 
     with st.spinner("🤖 Agents are working..."):
-        result = run_crew_with_logging(prompt, products, activity_placeholder)
-        # Use run_actual_crewai(prompt, products, activity_placeholder) for real CrewAI
+        # Use the actual CrewAI implementation
+        result = run_actual_crewai(prompt, products, activity_placeholder)
 
         st.session_state.result = result
 
@@ -355,14 +338,12 @@ if st.session_state.result:
 
 # Footer with instructions
 st.markdown("---")
-st.markdown("""
-<div style='background-color: #f0f9ff; padding: 15px; border-radius: 8px; border-left: 4px solid #0284c7;'>
-    <strong>💡 Tips for Integration:</strong>
-    <ul style='margin: 8px 0; padding-left: 20px;'>
-        <li>Set <code>verbose=True</code> in your Agent definitions to see internal thoughts</li>
-        <li>Set <code>verbose=True</code> in your Crew definition to see task execution details</li>
-        <li>Replace <code>run_crew_with_logging()</code> with <code>run_actual_crewai()</code> on line 294</li>
-        <li>All agent reasoning, tool calls, and observations will appear in real-time!</li>
-    </ul>
-</div>
-""", unsafe_allow_html=True)
+st.success("""
+**✅ Live Integration Active!**
+
+- The UI is now connected to the knowledge-based CrewAI agent
+- `verbose=True` is enabled to show internal agent thoughts
+- Agent uses knowledge sources: AWS IAM Best Practices & Security Compliance
+- All agent reasoning, tool calls, and observations appear in real-time!
+- Note: Product selection is ignored - the agent analyzes AWS IAM scenarios
+""")

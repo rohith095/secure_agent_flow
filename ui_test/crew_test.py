@@ -5,6 +5,7 @@ from crewai import Agent, Task, Crew
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 import sys
 import os
+import boto3
 
 # Add parent directory to path to import config
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -82,8 +83,16 @@ compliance_knowledge = StringKnowledgeSource(
     metadata={"source": "compliance_frameworks", "version": "2024"}
 )
 
+
 # Create test agent with knowledge
 test_agent = Agent(
+    embedder={
+        "provider": "bedrock",
+        "config": {
+            "model": "amazon.titan-embed-text-v2:0",
+            "session": boto3.Session(region_name="us-east-1")
+        }
+    },
     role="Security Compliance Analyst",
     goal="Analyze AWS IAM configurations and provide recommendations based on security best practices and compliance requirements",
     backstory="""You are an experienced security analyst specializing in cloud infrastructure
@@ -145,25 +154,24 @@ test_task = Task(
 )
 
 # Create crew
-crew = Crew(
+crew_inside = Crew(
     agents=[test_agent],
     tasks=[test_task],
     verbose=True
 )
-
-# Execute crew
-print("=" * 80)
-print("Starting Knowledge-Based Crew Execution")
-print("=" * 80)
-print("\nAgent: Security Compliance Analyst")
-print("Knowledge Sources: AWS IAM Best Practices, Security Compliance Requirements")
-print("\nExecuting analysis...\n")
-
-result = crew.kickoff()
-
-print("\n" + "=" * 80)
-print("Crew Execution Completed")
-print("=" * 80)
-print("\nResult:")
-print(result)
-
+#
+# # Execute crew
+# print("=" * 80)
+# print("Starting Knowledge-Based Crew Execution")
+# print("=" * 80)
+# print("\nAgent: Security Compliance Analyst")
+# print("Knowledge Sources: AWS IAM Best Practices, Security Compliance Requirements")
+# print("\nExecuting analysis...\n")
+#
+result = crew_inside.kickoff()
+#
+# print("\n" + "=" * 80)
+# print("Crew Execution Completed")
+# print("=" * 80)
+# print("\nResult:")
+# print(result)
