@@ -240,7 +240,7 @@ def run_actual_crewai(prompt, products, log_placeholder):
 # MAIN UI
 # ==========================
 
-st.title("🤖 CrewAI Agent Interface")
+st.title("🤖 AI security platform")
 st.markdown("See the complete internal workings of your AI agents in real-time")
 
 # Create two columns
@@ -334,12 +334,4 @@ if st.session_state.result:
 
 # Footer with instructions
 st.markdown("---")
-st.success("""
-**✅ Live Integration Active!**
-
-- The UI is now connected to the knowledge-based CrewAI agent
-- `verbose=True` is enabled to show internal agent thoughts
-- Agent uses knowledge sources: AWS IAM Best Practices & Security Compliance
-- All agent reasoning, tool calls, and observations appear in real-time!
-- Note: Product selection is ignored - the agent analyzes AWS IAM scenarios
-""")
+st.success("""Success""")
