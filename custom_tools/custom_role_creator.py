@@ -30,7 +30,7 @@ class AWSRoleCreatorInput(BaseModel):
     description: Optional[str] = Field(default=None, description="Description for the role")
     max_session_duration: int = Field(default=3600, description="Maximum session duration in seconds")
     customer_account_id: Optional[str] = Field(default=None, description="Customer AWS account ID to assume role into")
-    cross_account_role_name: Optional[str] = Field(default="CyberArkRoleSCA-6c116dd0-9300-11f0-bd68-0e66c6d684e1", description="Role name to assume in customer account")
+    cross_account_role_name: Optional[str] = Field(default="CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923", description="Role name to assume in customer account")
     external_id: Optional[str] = Field(default=None, description="External ID for cross-account role assumption")
 
 
@@ -122,7 +122,7 @@ class AWSRoleCreator(BaseTool):
              description: Optional[str] = None,
              max_session_duration: int = 3600,
              customer_account_id: Optional[str] = None,
-             cross_account_role_name: str = "CyberArkRoleSCA-6c116dd0-9300-11f0-bd68-0e66c6d684e1",
+             cross_account_role_name: str = "CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923",
              external_id: Optional[str] = None) -> str:
         """
         Create an AWS IAM custom role with specified policies in customer account via cross-account access.
@@ -334,7 +334,7 @@ class AWSRoleCreator(BaseTool):
                                               role_name: str,
                                               cloudtrail_events: List[Dict[str, Any]],
                                               customer_account_id: Optional[str] = None,
-                                              cross_account_role_name: str = "CyberArkRoleSCA-6c116dd0-9300-11f0-bd68-0e66c6d684e1",
+                                              cross_account_role_name: str = "CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923",
                                               external_id: Optional[str] = None) -> str:
         """
         Create a least-privilege role based on analyzed CloudTrail events for cross-account deployment.

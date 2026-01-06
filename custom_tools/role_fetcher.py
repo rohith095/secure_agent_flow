@@ -16,7 +16,7 @@ class CloudTrailFetcherInput(BaseModel):
     """Input schema for CloudTrail Events Fetcher tool."""
     specific_user: Optional[str] = Field(default=None, description="Specific IAM username to fetch events for (optional)")
     customer_account_id: Optional[str] = Field(default=None, description="Customer AWS account ID to assume role into")
-    cross_account_role_name: Optional[str] = Field(default="CyberArkRoleSCA-6c116dd0-9300-11f0-bd68-0e66c6d684e1", description="Role name to assume in customer account")
+    cross_account_role_name: Optional[str] = Field(default="CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923", description="Role name to assume in customer account")
     external_id: Optional[str] = Field(default=None, description="External ID for cross-account role assumption (optional)")
 
 class CloudTrailEventsFetcher(BaseTool):
@@ -260,7 +260,7 @@ class CloudTrailEventsFetcher(BaseTool):
                 })
         return results
 
-    def _run(self, specific_user: str = None, customer_account_id: str = None, cross_account_role_name: str = "CyberArkRoleSCA-6c116dd0-9300-11f0-bd68-0e66c6d684e1", external_id: str = None) -> str:
+    def _run(self, specific_user: str = None, customer_account_id: str = None, cross_account_role_name: str = "CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923", external_id: str = None) -> str:
         """Execute the CloudTrail events fetching logic and return JSON."""
         try:
             # Set time range for CloudTrail events (fixed to 1 day)

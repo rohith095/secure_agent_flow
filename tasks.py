@@ -29,7 +29,7 @@ class SecureAgentFlowTasks:
             MANDATORY WORKFLOW - Execute in this exact order:
             1. **FIRST: Use CloudTrail_Events_Fetcher tool** with cross-account parameters:
                - customer_account_id: {customer_account_id or "REQUIRED - Customer AWS Account ID"}
-               - cross_account_role_name: "CyberArkRoleSCA-6c116dd0-9300-11f0-bd68-0e66c6d684e1" (or specified role name)
+               - cross_account_role_name: "CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923" (or specified role name)
                - external_id: Optional external ID for additional security
             2. **SECOND: Analyze CloudTrail events** to identify actual permission usage patterns and frequency
             3. **THIRD: Use AWS Role Creator tool** with cross-account parameters to create optimized custom roles in customer account
@@ -186,7 +186,7 @@ class SecureAgentFlowTasks:
 
         )
 
-    def create_policy_task(self, agent, policy_requirements="", fetch_context=""):
+    def create_policy_task(self, agent, policy_requirements="", fetch_context="", customer_account_id=None):
         """
         Task for the Policy Creator agent to generate comprehensive security policies.
         """
@@ -197,10 +197,13 @@ class SecureAgentFlowTasks:
             CONTEXT FROM ROLES AND DETAILS ANALYSIS:
             {fetch_context}
             
+            CUSTOMER ACCOUNT ID: {customer_account_id}
+            
             Your task includes:
             1. **FIRST: Call rescan to get recently created roles** - Use the CyberArk SCA Tool with action='rescan' to scan for recently created roles by the roles_and_details_fetcher_agent
             2. **SECOND: Extract IAM user and role mapping** from the fetch context and rescan results
-            3. **THIRD: Create identity users for each IAM user** - Use CyberArk SCA Tool with action='create_identity_user' for each IAM user found in the analysis
+            3. **THIRD: Create identity users for each IAM user** - Use CyberArk SCA Tool with action='create_identity_user' for each IAM user found in the analysis. 
+               IMPORTANT: Pass customer_account_id='{customer_account_id}' to access secrets in the customer account
             4. **FOURTH: Extract custom roles from the CloudTrail analysis results** - Look for role ARNs created by the fetch task
             5. **FIFTH: Prepare the policy payload** with the dynamically created identity users and custom roles
             6. **SIXTH: Use the CyberArk SCA Tool** to create the actual policy with action='create_policy' and the prepared payload
@@ -210,13 +213,18 @@ class SecureAgentFlowTasks:
             2. **Extract IAM user details** from fetch context and identify the iam_user_role_mapping section
             3. **Create identity users**: For each IAM user found, call CyberArk SCA Tool with action='create_identity_user' using this payload format:
                {{
-                 "Name": "<IAM_USERNAME>@cyberark.cloud.55567",
-                 "Mail": "<IAM_USER_EMAIL>",
-                 "Password": "abcD1234",
-                 "InEverybodyRole": True,
-                 "InSysAdminRole": False
+                 "action": "create_identity_user",
+                 "identity_payload": {{
+                   "Name": "<IAM_USERNAME>@cyberark.cloud.18917",
+                   "Mail": "<IAM_USER_EMAIL>",
+                   "Password": "abcD1234",
+                   "InEverybodyRole": True,
+                   "InSysAdminRole": False
+                 }},
+                 "customer_account_id": "{customer_account_id}"
                }}
                Where <IAM_USERNAME> is replaced with the actual IAM username and <IAM_USER_EMAIL> with the user's email
+               CRITICAL: Always pass customer_account_id to access secrets from customer account via cross-account role
             4. **Map created identity users to custom roles**: Maintain mapping between IAM users, created identity users, and their associated custom roles
             5. **Prepare the policy payload** using the created identity users instead of static identities:
                {{

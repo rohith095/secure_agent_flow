@@ -19,7 +19,7 @@ import json
 import time
 
 # Configuration
-SCA_BASE_URL = os.getenv('SCA_BASE_URL', 'https://ady7840.id.cyberark-everest-integdev.cloud')
+SCA_BASE_URL = os.getenv('SCA_BASE_URL', 'https://abf7588.id.cyberark-everest-integdev.cloud')
 SCA_CLIENT_ID = os.getenv('SCA_CLIENT_ID', 'YOUR_CLIENT_ID')
 SCA_CLIENT_SECRET = os.getenv('SCA_CLIENT_SECRET', 'YOUR_CLIENT_SECRET')
 SCA_USERNAME = os.getenv('SCA_USERNAME', 'YOUR_USERNAME')
@@ -27,7 +27,7 @@ SCA_PASSWORD = os.getenv('SCA_PASSWORD', 'YOUR_PASSWORD')
 
 # Endpoints
 AUTH_URL = f"{SCA_BASE_URL}/oauth2/token/scadev"
-SCA_POLICY_URL = "https://navi-test-sca.cyberark-everest-integdev.cloud/api/"
+SCA_POLICY_URL = "https://scadev3-ssoint.sca.cyberark-everest-integdev.cloud/api/"
 CREATE_POLICY_URL = f"{SCA_POLICY_URL}policies/create-policy"
 RESCAN_URL = f"{SCA_POLICY_URL}cloud/rescan"
 JOB_STATUS_URL = f"{SCA_POLICY_URL}integrations/status"
@@ -42,6 +42,10 @@ class SCAToolInput(BaseModel):
     tenant_endpoint: Optional[str] = Field(default=None, description="Tenant endpoint for identity operations")
     service_user_id: Optional[str] = Field(default=None, description="Service user ID for identity operations")
     service_password: Optional[str] = Field(default=None, description="Service password for identity operations")
+    session: Optional[Any] = Field(default=None, description="AWS boto3 session for cross-account operations")
+    customer_account_id: Optional[str] = Field(default=None, description="Customer AWS account ID for cross-account role assumption")
+    cross_account_role_name: Optional[str] = Field(default="CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923", description="Role name to assume in customer account")
+    external_id: Optional[str] = Field(default=None, description="External ID for cross-account role assumption")
 
 class SCATool(BaseTool):
     name: str = "CyberArk SCA Tool"
@@ -49,7 +53,9 @@ class SCATool(BaseTool):
         "Tool for creating policies, identity users, and rescanning cloud resources in CyberArk SCA. "
         "Supports three actions: 'create_policy' for creating SCA policies, "
         "'create_identity_user' for creating identity users using CyberArk Identity, "
-        "and 'rescan' for rescanning cloud resources to get recently created roles."
+        "and 'rescan' for rescanning cloud resources to get recently created roles. "
+        "Supports cross-account operations by accepting customer_account_id parameter "
+        "to assume a cross-account role and access resources in customer AWS accounts."
     )
     args_schema: Type[BaseModel] = SCAToolInput
 
@@ -58,6 +64,57 @@ class SCATool(BaseTool):
     def __init__(self):
         super().__init__(logger= logging.getLogger(__name__))
 
+    def _assume_cross_account_role(self, customer_account_id: str, role_name: str, external_id: Optional[str] = None):
+        """Assume a cross-account role and return the assumed role session."""
+        try:
+            from datetime import datetime
+            # Create STS client
+            sts_client = boto3.client('sts')
+
+            # Build role ARN
+            role_arn = f"arn:aws:iam::{customer_account_id}:role/{role_name}"
+
+            # Prepare assume role parameters
+            assume_role_params = {
+                'RoleArn': role_arn,
+                'RoleSessionName': f'SCATool-{datetime.now().strftime("%Y%m%d%H%M%S")}'
+            }
+
+            # Add external ID if provided
+            if external_id:
+                assume_role_params['ExternalId'] = external_id
+
+            # Assume the role
+            response = sts_client.assume_role(**assume_role_params)
+
+            # Extract credentials
+            credentials = response['Credentials']
+
+            # Create session with assumed role credentials
+            assumed_session = boto3.Session(
+                aws_access_key_id=credentials['AccessKeyId'],
+                aws_secret_access_key=credentials['SecretAccessKey'],
+                aws_session_token=credentials['SessionToken']
+            )
+
+            self.logger.info(f"Successfully assumed cross-account role: {role_arn}")
+            return {
+                "session": assumed_session,
+                "account_id": customer_account_id,
+                "role_arn": role_arn,
+                "error": None
+            }
+
+        except ClientError as e:
+            role_arn = f"arn:aws:iam::{customer_account_id}:role/{role_name}"
+            error_msg = f"Failed to assume cross-account role {role_arn}: {str(e)}"
+            self.logger.error(error_msg)
+            return {
+                "session": None,
+                "account_id": customer_account_id,
+                "role_arn": role_arn,
+                "error": error_msg
+            }
 
     def get_sca_access_token(self) -> str:
         """Get SCA access token using client credentials."""
@@ -236,7 +293,12 @@ class SCATool(BaseTool):
             }
             payload = {
                 "cloudProvider": 0,
-                "accountType": "All"
+                "accountType": "Specific",
+                "entityIds": [
+                    {
+                        "account_id": "371513194691"
+                    }
+                ]
             }
             resp = requests.post(RESCAN_URL, json=payload, headers=headers, timeout=REQUEST_TIMEOUT_SEC)
             resp.raise_for_status()
@@ -277,8 +339,22 @@ class SCATool(BaseTool):
     def _run(self, action: str, policy_payload: Optional[Dict[str, Any]] = None,
              identity_payload: Optional[Dict[str, Any]] = None,
              tenant_endpoint: Optional[str] = None, service_user_id: Optional[str] = None,
-             service_password: Optional[str] = None) -> Dict[str, Any]:
+             service_password: Optional[str] = None, session: Optional[Any] = None,
+             customer_account_id: Optional[str] = None, 
+             cross_account_role_name: str = "CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923",
+             external_id: Optional[str] = None) -> Dict[str, Any]:
         """Execute the specified action."""
+
+        # If customer_account_id is provided and no session exists, assume cross-account role
+        if customer_account_id and not session:
+            self.logger.info(f"Assuming cross-account role for customer account: {customer_account_id}")
+            assume_role_result = self._assume_cross_account_role(customer_account_id, cross_account_role_name, external_id)
+            if assume_role_result["error"]:
+                error_msg = f"Failed to assume cross-account role: {assume_role_result['error']}"
+                self.logger.error(error_msg)
+                raise RuntimeError(error_msg)
+            session = assume_role_result["session"]
+            self.logger.info(f"Successfully assumed role: {assume_role_result['role_arn']}")
 
         if action == "create_policy":
             if not policy_payload:
@@ -294,7 +370,11 @@ class SCATool(BaseTool):
                 "content": 'Identity users creation Started ...',
             }
             send_to_websocket(initial_response)
-            tenant_endpoint, service_user_id, service_password = get_aws_secret()
+            # Pass the session to get_aws_secret for cross-account operations
+            # tenant_endpoint, service_user_id, service_password = get_aws_secret(session=session)
+            tenant_endpoint = "https://abf7588.id.cyberark-everest-integdev.cloud"
+            service_user_id = "1444bbdf-13e1-4419-bfc9-b8c63961d177"
+            service_password = "-n#x)bt35:YDRcc9&42quuN&U.R;G(T"
             return self.create_identity_user(tenant_endpoint, service_user_id, service_password, identity_payload)
 
         elif action == "rescan":
@@ -311,13 +391,22 @@ class SCATool(BaseTool):
         else:
             raise ValueError(f"Unknown action: {action}. Supported actions: 'create_policy', 'create_identity_user', 'rescan'")
 
-def get_aws_secret(secret_name="d6f344b7-5ea6-4351-87c4-8a1141e486a9.integdev.Identity", region_name="us-east-1"):
-    """Retrieve a secret from AWS Secrets Manager."""
-    session = boto3.session.Session()
-    client = session.client(
-        service_name='secretsmanager',
-        region_name=region_name
-    )
+def get_aws_secret(secret_name="b2d786ca-5ee0-4887-95bc-d682d422fdfc.integdev.Identity", region_name="us-east-1", session=None):
+    """Retrieve a secret from AWS Secrets Manager using provided session or default."""
+    
+    # Use provided session or create a new one
+    if session:
+        client = session.client(
+            service_name='secretsmanager',
+            region_name=region_name
+        )
+    else:
+        # Fallback to creating a new session
+        session = boto3.session.Session()
+        client = session.client(
+            service_name='secretsmanager',
+            region_name=region_name
+        )
 
     try:
         get_secret_value_response = client.get_secret_value(

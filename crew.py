@@ -43,7 +43,8 @@ class SecureAgentFlowCrew:
         policy_task = self.tasks.create_policy_task(
             agent=policy_creator,
             policy_requirements=policy_requirements,
-            fetch_context="{fetch_task.output}"  # This will pass the output from fetch_task
+            fetch_context="{fetch_task.output}",  # This will pass the output from fetch_task
+            customer_account_id=customer_account_id
         )
 
         # Set up task dependency - policy_task depends on fetch_task
@@ -116,7 +117,7 @@ class SecureAgentFlowCrew:
             'prepare': (self.agents.prepare_agent(),
                         lambda agent: self.tasks.prepare_data_task(agent)),
             'policy': (self.agents.policy_creator_agent(),
-                       lambda agent: self.tasks.create_policy_task(agent, policy_requirements))
+                       lambda agent: self.tasks.create_policy_task(agent, policy_requirements, customer_account_id=customer_account_id))
         }
 
         if task_name not in task_mapping:
@@ -162,5 +163,5 @@ if __name__ == "__main__":
     Then generate a Service Control Policy (SCP) that enforces security boundaries for this role."""
     result = crew.run_workflow(
         context_input=context_input,
-        customer_account_id="148628765294"
+        customer_account_id="371513194691"
     )
