@@ -50,15 +50,7 @@ class SecureAgentFlowCrew:
         # Set up task dependency - policy_task depends on fetch_task
         policy_task.context = [fetch_task]
 
-        initial_response = {
-          "messageIdRef": 11,
-          "type": 'event',
-          "eventType": 'thinking',
-          "eventStatus": 'loading',
-          "content": 'Processing your request...',
-        }
-        send_to_websocket(initial_response)
-        # Create and configure the crew
+
         crew = Crew(
             agents=[roles_fetcher, policy_creator],
             tasks=[fetch_task, policy_task],

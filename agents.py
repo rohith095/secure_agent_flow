@@ -3,9 +3,10 @@ Agents definition for the secure agent flow crew.
 """
 import os
 
+import crewai
 from crewai import Agent
 from crewai_tools.adapters.mcp_adapter import MCPServerAdapter
-
+from crewai.knowledge.source.pdf_knowledge_source import PDFKnowledgeSource
 from config import Config
 from custom_tools.custom_role_creator import AWSRoleCreator
 from custom_tools.role_fetcher import CloudTrailEventsFetcher

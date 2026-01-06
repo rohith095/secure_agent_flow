@@ -2,7 +2,6 @@ import streamlit as st
 import time
 import json
 import sys
-
 # Page configuration
 st.set_page_config(
     page_title="Security AI architect agent",
@@ -205,7 +204,9 @@ def run_actual_crewai(prompt, products, log_placeholder):
         from ui_test.crew_test import crew_inside
 
         # Execute the crew
-        result = crew_inside.kickoff({"prompt": prompt})
+        # result = crew_inside.kickoff({"prompt": prompt})
+
+        result = crew.run_workflow({"context_input": prompt,"customer_account_id":"371513194691"})
 
         # Format the result for display
         formatted_result = {
@@ -236,7 +237,7 @@ def run_actual_crewai(prompt, products, log_placeholder):
 # MAIN UI
 # ==========================
 
-st.title("🤖 CrewAI Agent Interface")
+st.title("🤖Security AI Platform")
 st.markdown("See the complete internal workings of your AI agents in real-time")
 
 # Create two columns
