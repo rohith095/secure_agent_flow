@@ -2,6 +2,7 @@
 Complete knowledge-based crew test example.
 """
 from crewai import Agent, Task, Crew
+from crewai.knowledge.source.json_knowledge_source import JSONKnowledgeSource
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 import sys
 import os
@@ -54,6 +55,12 @@ iam_knowledge = StringKnowledgeSource(
     metadata={"source": "aws_iam_best_practices", "version": "2024"}
 )
 
+# Create API documentation knowledge source
+api_docs_knowledge = JSONKnowledgeSource(
+    file_paths=["Secure Cloud Access APIs.json"],
+    metadata={"source": "sca_api_docs", "version": "2024"}
+)
+
 # Create a knowledge source about security compliance
 compliance_knowledge = StringKnowledgeSource(
     content="""
@@ -83,7 +90,6 @@ compliance_knowledge = StringKnowledgeSource(
     metadata={"source": "compliance_frameworks", "version": "2024"}
 )
 
-
 # Create test agent with knowledge
 test_agent = Agent(
     embedder={
@@ -93,64 +99,38 @@ test_agent = Agent(
             "session": boto3.Session(region_name="us-east-1")
         }
     },
-    role="Security Compliance Analyst",
-    goal="Analyze AWS IAM configurations and provide recommendations based on security best practices and compliance requirements",
-    backstory="""You are an experienced security analyst specializing in cloud infrastructure
-    security and compliance. You have deep knowledge of AWS IAM best practices and various
-    compliance frameworks including SOC 2 and GDPR. You excel at identifying security gaps
-    and providing actionable recommendations that balance security with operational needs.""",
+    role="api payload former",
+    goal="Generate accurate API payloads based on provided prompts and knowledge sources",
+    backstory="you are an expert in generating API payloads using knowledge bases and best practices.",
     verbose=True,
     allow_delegation=False,
     llm=llm,
-    knowledge_sources=[iam_knowledge, compliance_knowledge]
+    knowledge_sources=[api_docs_knowledge]
 )
 
 # Create test task
 test_task = Task(
     description="""
-    Analyze the following AWS IAM scenario and provide security recommendations:
+    Based on the following user request, generate the appropriate API payload(s) using your knowledge base:
     
-    Scenario:
-    A development team has been using shared IAM user credentials with full administrator access
-    for deploying applications to production EC2 instances. The credentials are rotated manually
-    every 6 months. There's no MFA enabled, and the team accesses AWS from various locations.
-    The company needs to achieve SOC 2 compliance.
+    User Request: {prompt}
     
-    Your analysis should include:
-    1. Identify security risks in the current setup
-    2. Provide specific recommendations based on AWS IAM best practices
-    3. Explain how to align with SOC 2 compliance requirements
-    4. Suggest an implementation roadmap with priorities
-    
-    Use your knowledge base extensively to support your recommendations with specific
-    best practices and compliance requirements.
+    Instructions:
+    1. Search your knowledge base for relevant API endpoints
+    2. Identify all APIs that match the user's request
+    3. Generate complete, valid JSON payloads for each API
+    4. Include all required fields and provide example values
+    5. Add comments explaining each field's purpose
+    6. Ensure the payloads follow the exact structure from the knowledge base
     """,
     agent=test_agent,
-    expected_output="""A comprehensive security analysis report containing:
+    expected_output="""A comprehensive response containing:
+    1. List of relevant API endpoints found
+    2. Complete JSON payload for each API
+    3. Explanation of each payload structure
+    4. Example values that make sense for the use case
     
-    1. Risk Assessment
-       - List of identified security risks with severity ratings
-       - Potential impact of each risk
-    
-    2. Best Practice Violations
-       - Specific AWS IAM best practices being violated
-       - References from knowledge base
-    
-    3. Compliance Gaps
-       - SOC 2 requirements not being met
-       - Specific controls needed
-    
-    4. Recommendations
-       - Prioritized list of actionable recommendations
-       - Implementation steps for each recommendation
-       - Expected security improvements
-    
-    5. Implementation Roadmap
-       - Phase 1 (Immediate): Critical security fixes
-       - Phase 2 (Short-term): Important improvements
-       - Phase 3 (Long-term): Optimization and automation
-    
-    Format: Clear, structured report with specific action items"""
+    Format: JSON with explanations"""
 )
 
 # Create crew
@@ -159,19 +139,20 @@ crew_inside = Crew(
     tasks=[test_task],
     verbose=True
 )
-#
-# # Execute crew
-# print("=" * 80)
-# print("Starting Knowledge-Based Crew Execution")
-# print("=" * 80)
-# print("\nAgent: Security Compliance Analyst")
-# print("Knowledge Sources: AWS IAM Best Practices, Security Compliance Requirements")
-# print("\nExecuting analysis...\n")
-#
-result = crew_inside.kickoff()
-#
-# print("\n" + "=" * 80)
-# print("Crew Execution Completed")
-# print("=" * 80)
-# print("\nResult:")
+
+# Execute crew
+print("=" * 80)
+print("Starting Knowledge-Based Crew Execution")
+print("=" * 80)
+print("\nAgent: API Payload Former")
+print("Knowledge Sources: Secure Cloud Access APIs")
+print("\nExecuting analysis...\n")
+
+# prompt = "give me list of policies response model"
+# result = crew_inside.kickoff(inputs={"prompt": prompt})
+
+print("\n" + "=" * 80)
+print("Crew Execution Completed")
+print("=" * 80)
+print("\nResult:")
 # print(result)

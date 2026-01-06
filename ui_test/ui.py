@@ -5,7 +5,7 @@ import sys
 
 # Page configuration
 st.set_page_config(
-    page_title="CrewAI Agent",
+    page_title="Security AI architect agent",
     page_icon="🤖",
     layout="wide"
 )
@@ -116,21 +116,13 @@ def format_activity_log():
         # Clean up the message
         message = activity['message'].replace('<', '&lt;').replace('>', '&gt;')
 
-        output.append(f"""
-        <p style="background-color: {color['bg']}; 
-                    padding: 10px 12px; 
-                    margin: 6px 0; 
-                    border-radius: 6px; 
-                    border-left: 4px solid {color['border']};
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                    font-family: monospace; 
-                    font-size: 13px;">
-            <span style="font-size: 16px;">{activity['icon']}</span>
-            <span style="color: {color['text']}; font-weight: 500; line-height: 1.5; white-space: pre-wrap;">{message}</span>
-            <br>
-            <span style="color: {color['text']}; opacity: 0.6; font-size: 11px;">{activity['timestamp']}</span>
-        </p>
-        """)
+        # Create a properly formatted HTML block without extra indentation
+        html_block = f"""<div style="background-color: {color['bg']}; padding: 10px 12px; margin: 6px 0; border-radius: 6px; border-left: 4px solid {color['border']}; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-family: monospace; font-size: 13px;">
+<span style="font-size: 16px; margin-right: 8px;">{activity['icon']}</span><span style="color: {color['text']}; font-weight: 500; line-height: 1.5; white-space: pre-wrap;">{message}</span>
+<div style="color: {color['text']}; opacity: 0.6; font-size: 11px; margin-top: 4px;">{activity['timestamp']}</div>
+</div>"""
+
+        output.append(html_block)
 
     return "".join(output)
 
@@ -213,7 +205,7 @@ def run_actual_crewai(prompt, products, log_placeholder):
         from ui_test.crew_test import crew_inside
 
         # Execute the crew
-        result = crew_inside.kickoff()
+        result = crew_inside.kickoff({"prompt": prompt})
 
         # Format the result for display
         formatted_result = {
@@ -303,8 +295,8 @@ with col2:
     activity_placeholder.markdown(format_activity_log(), unsafe_allow_html=True)
 
 # Process after layout is set up
-if submit_button and prompt and "" not in [product1, product2, product3, product4]:
-    products = [product1, product2, product3, product4]
+if submit_button and prompt:
+    # products = [product1, product2, product3, product4]
 
     with st.spinner("🤖 Agents are working..."):
         # Use the actual CrewAI implementation
