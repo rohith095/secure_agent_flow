@@ -30,6 +30,7 @@ class SecureAgentFlowCrew:
 
         # Initialize all agents
         roles_fetcher = self.agents.roles_and_details_fetcher_agent()
+        payload_generator = self.agents.payload_generator_agent()
         policy_creator = self.agents.policy_creator_agent()
 
         # Define all tasks with dependencies
@@ -39,6 +40,10 @@ class SecureAgentFlowCrew:
             customer_account_id=customer_account_id
         )
 
+        generate_payload_task = self.tasks.generate_policy_payload_task(
+            agent=payload_generator,
+            fetch_context="{fetch_task.output}"
+        )
 
         policy_task = self.tasks.create_policy_task(
             agent=policy_creator,
@@ -47,8 +52,9 @@ class SecureAgentFlowCrew:
             customer_account_id=customer_account_id
         )
 
-        # Set up task dependency - policy_task depends on fetch_task
-        policy_task.context = [fetch_task]
+        # Set up task dependencies
+        generate_payload_task.context = [fetch_task]
+        policy_task.context = [fetch_task, generate_payload_task]
 
         initial_response = {
           "messageIdRef": 11,
@@ -60,8 +66,8 @@ class SecureAgentFlowCrew:
         send_to_websocket(initial_response)
         # Create and configure the crew
         crew = Crew(
-            agents=[roles_fetcher, policy_creator],
-            tasks=[fetch_task, policy_task],
+            agents=[roles_fetcher, payload_generator, policy_creator],
+            tasks=[fetch_task, generate_payload_task, policy_task],
             process=Process.sequential,
             verbose=True,
             # Disable telemetry
@@ -78,9 +84,9 @@ class SecureAgentFlowCrew:
                 "eventStatus": 'completed',
                 "content": 'Processed your request...',
             }
-            send_to_websocket(second_response)
-
-            send_to_websocket(result)
+            # send_to_websocket(second_response)
+            #
+            # send_to_websocket(result)
             return {
                 "success": True,
                 "result": result,

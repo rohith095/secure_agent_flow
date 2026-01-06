@@ -36,8 +36,9 @@ REQUEST_TIMEOUT_SEC = 30
 
 class SCAToolInput(BaseModel):
     """Input schema for SCA Tool."""
-    action: str = Field(..., description="Action to perform: 'create_policy', 'create_identity_user', or 'rescan'")
+    action: str = Field(..., description="Action to perform: 'create_policy', 'create_identity_user', 'rescan', or 'get_policy'")
     policy_payload: Optional[Dict[str, Any]] = Field(default=None, description="Payload for policy creation")
+    policy_id: Optional[str] = Field(default=None, description="Policy ID for retrieving policy details")
     identity_payload: Optional[Dict[str, Any]] = Field(default=None, description="Payload for identity user creation")
     tenant_endpoint: Optional[str] = Field(default=None, description="Tenant endpoint for identity operations")
     service_user_id: Optional[str] = Field(default=None, description="Service user ID for identity operations")
@@ -50,10 +51,11 @@ class SCAToolInput(BaseModel):
 class SCATool(BaseTool):
     name: str = "CyberArk SCA Tool"
     description: str = (
-        "Tool for creating policies, identity users, and rescanning cloud resources in CyberArk SCA. "
-        "Supports three actions: 'create_policy' for creating SCA policies, "
+        "Tool for creating policies, identity users, rescanning cloud resources, and retrieving policy details in CyberArk SCA. "
+        "Supports four actions: 'create_policy' for creating SCA policies, "
         "'create_identity_user' for creating identity users using CyberArk Identity, "
-        "and 'rescan' for rescanning cloud resources to get recently created roles. "
+        "'rescan' for rescanning cloud resources to get recently created roles, "
+        "and 'get_policy' for retrieving details of a created policy by policy ID. "
         "Supports cross-account operations by accepting customer_account_id parameter "
         "to assume a cross-account role and access resources in customer AWS accounts."
     )
@@ -282,6 +284,31 @@ class SCATool(BaseTool):
             raise RuntimeError(f"Job {job_id} failed after timeout: {final_status}")
         return final_status
 
+    def get_policy(self, policy_id: str) -> Dict[str, Any]:
+        """Get policy details by policy ID."""
+        try:
+            token = self.get_sca_access_token()
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+                "X-API-Version": "2.0"
+            }
+            get_policy_url = f"{SCA_POLICY_URL}policies/{policy_id}"
+            resp = requests.get(get_policy_url, headers=headers, timeout=REQUEST_TIMEOUT_SEC)
+            resp.raise_for_status()
+            
+            policy_details = resp.json()
+            self.logger.info(f"Successfully retrieved policy details for policy_id: {policy_id}")
+            
+            return {
+                "policy_id": policy_id,
+                "policy_details": policy_details,
+                "success": True
+            }
+        except Exception as e:
+            self.logger.error(f"Error getting policy details for {policy_id}: {e}")
+            raise
+
     def rescan(self) -> Dict[str, Any]:
         """Rescan cloud resources to get recently created roles and wait for completion."""
 
@@ -337,6 +364,7 @@ class SCATool(BaseTool):
             raise
 
     def _run(self, action: str, policy_payload: Optional[Dict[str, Any]] = None,
+             policy_id: Optional[str] = None,
              identity_payload: Optional[Dict[str, Any]] = None,
              tenant_endpoint: Optional[str] = None, service_user_id: Optional[str] = None,
              service_password: Optional[str] = None, session: Optional[Any] = None,
@@ -360,6 +388,11 @@ class SCATool(BaseTool):
             if not policy_payload:
                 raise ValueError("policy_payload is required for create_policy action")
             return self.create_policy(policy_payload)
+
+        elif action == "get_policy":
+            if not policy_id:
+                raise ValueError("policy_id is required for get_policy action")
+            return self.get_policy(policy_id)
 
         elif action == "create_identity_user":
             initial_response = {
@@ -389,7 +422,7 @@ class SCATool(BaseTool):
             return self.rescan()
 
         else:
-            raise ValueError(f"Unknown action: {action}. Supported actions: 'create_policy', 'create_identity_user', 'rescan'")
+            raise ValueError(f"Unknown action: {action}. Supported actions: 'create_policy', 'create_identity_user', 'rescan', 'get_policy'")
 
 def get_aws_secret(secret_name="b2d786ca-5ee0-4887-95bc-d682d422fdfc.integdev.Identity", region_name="us-east-1", session=None):
     """Retrieve a secret from AWS Secrets Manager using provided session or default."""

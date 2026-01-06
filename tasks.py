@@ -108,6 +108,97 @@ class SecureAgentFlowTasks:
         )
 
 
+    def generate_policy_payload_task(self, agent, fetch_context=""):
+        """
+        Task for the Payload Generator agent to create policy creation payloads dynamically.
+        """
+        return Task(
+            description=f"""
+            Generate valid JSON payload(s) for creating CyberArk SCA policies based on the analyzed data.
+            
+            CONTEXT FROM PREVIOUS TASKS:
+            {fetch_context}
+            
+            Your task includes:
+            1. **Extract Key Information** from the context:
+               - Created identity user names and their details
+               - Custom role ARNs created in the customer account
+               - Account IDs from the role ARNs
+               - IAM username to identity user mapping
+            
+            2. **Search Knowledge Base** for the correct API payload structure:
+               - Look for "create policy" or "post-policies" endpoint
+               - Understand the exact schema for AWS IAM policy creation
+               - Identify all required and optional fields
+            
+            3. **Generate Complete Policy Payload(s)** following this structure:
+               - Use "AWS" as the csp (cloud service provider)
+               - Create descriptive policy names like: "optimized_policy_<iam_username>_v1"
+               - Set policyType to "pre_defined"
+               - Map custom role ARNs to the roles array with:
+                 * entityId: the complete role ARN
+                 * workspaceType: "account"
+                 * entitySourceId: the account ID extracted from the role ARN
+               - Map created identity users to the identities array with:
+                 * entityName: the created identity user name
+                 * entitySourceId: "09B9A9B0-6CE8-465F-AB03-65766D33B05E"
+                 * entityClass: "user"
+               - Set accessRules with:
+                 * days: all days of the week
+                 * fromTime: null
+                 * toTime: null
+                 * maxSessionDuration: 1
+                 * timeZone: "Asia/Jerusalem"
+            
+            4. **Create One Payload per IAM User-Role Combination** to ensure proper mapping
+            
+            5. **Validate the Payload** against the knowledge base schema to ensure all required fields are present
+            
+            CRITICAL REQUIREMENTS:
+            - Generate valid JSON that exactly matches the API schema from your knowledge base
+            - Extract account IDs from role ARNs (the numeric part after arn:aws:iam::)
+            - Use the CREATED identity user names from the context, not placeholder values
+            - Ensure each payload is complete and ready to be sent to the API
+            - Output ONLY the JSON payload(s), no additional text or markdown formatting
+            """,
+            agent=agent,
+            expected_output="""One or more complete, valid JSON payloads for policy creation. Each payload should be a complete JSON object following the CyberArk SCA create policy API schema.
+
+Example format:
+{
+  "csp": "AWS",
+  "name": "optimized_policy_user1_v1",
+  "description": "Policy based on CloudTrail analysis for least-privilege access",
+  "startDate": null,
+  "endDate": null,
+  "policyType": "pre_defined",
+  "roles": [
+    {
+      "entityId": "arn:aws:iam::123456789012:role/CustomRole1",
+      "workspaceType": "account",
+      "entitySourceId": "123456789012"
+    }
+  ],
+  "identities": [
+    {
+      "entityName": "user1@cyberark.cloud.18917",
+      "entitySourceId": "09B9A9B0-6CE8-465F-AB03-65766D33B05E",
+      "entityClass": "user"
+    }
+  ],
+  "accessRules": {
+    "days": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    "fromTime": null,
+    "toTime": null,
+    "maxSessionDuration": 1,
+    "timeZone": "Asia/Jerusalem"
+  }
+}
+
+If multiple IAM users exist, provide multiple complete JSON objects separated by newlines.""",
+            callback=send_to_websocket
+        )
+
     def create_mapping_task(self, agent):
         """
         Task for the Mapping agent to create relationship mappings.
@@ -208,7 +299,7 @@ class SecureAgentFlowTasks:
             5. **FIFTH: Prepare the policy payload** with the dynamically created identity users and custom roles
             6. **SIXTH: Use the CyberArk SCA Tool** to create the actual policy with action='create_policy' and the prepared payload
             
-            MANDATORY STEPS FOR IDENTITY USER CREATION:
+            MANDATORY STEPS FOR IDENTITY USER CREATION AND POLICY CREATION:
             1. **RESCAN FIRST**: Call CyberArk SCA Tool with action='rescan' to get recently created roles
             2. **Extract IAM user details** from fetch context and identify the iam_user_role_mapping section
             3. **Create identity users**: For each IAM user found, call CyberArk SCA Tool with action='create_identity_user' using this payload format:
@@ -225,41 +316,17 @@ class SecureAgentFlowTasks:
                }}
                Where <IAM_USERNAME> is replaced with the actual IAM username and <IAM_USER_EMAIL> with the user's email
                CRITICAL: Always pass customer_account_id to access secrets from customer account via cross-account role
-            4. **Map created identity users to custom roles**: Maintain mapping between IAM users, created identity users, and their associated custom roles
-            5. **Prepare the policy payload** using the created identity users instead of static identities:
-               {{
-                 "csp": "AWS",
-                 "name": "optimized_policy_<IAM_USERNAME>_v1",
-                 "description": "Policy based on CloudTrail analysis for least-privilege access for <IAM_USERNAME>",
-                 "startDate": null,
-                 "endDate": null,
-                 "policyType": "pre_defined",
-                 "roles": [
-                   {{
-                     "entityId": "<ROLE_ARN_FROM_ANALYSIS>",
-                     "workspaceType": "account",
-                     "entitySourceId": "<ACCOUNT_ID_FROM_ROLE_ARN>"
-                   }}
-                 ],
-                 "identities": [
-                   {{
-                     "entityName": "<CREATED_IDENTITY_USER_NAME>",
-                     "entitySourceId": "09B9A9B0-6CE8-465F-AB03-65766D33B05E",
-                     "entityClass": "user"
-                   }}
-                 ],
-                 "accessRules": {{
-                   "days": [
-                     "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
-                   ],
-                   "fromTime": null,
-                   "toTime": null,
-                   "maxSessionDuration": 1,
-                   "timeZone": "Asia/Jerusalem"
-                 }}
-               }}
-            6. **Create separate policies** for each IAM user-role combination to ensure proper mapping
+            4. **Extract the dynamically generated policy payload(s)** from the generate_payload_task output
+            5. **Verify the payload structure**: Ensure the generated payload has all required fields:
+               - csp, name, description, policyType
+               - roles array with entityId, workspaceType, entitySourceId
+               - identities array with created identity user names
+               - accessRules with days, maxSessionDuration, timeZone
+            6. **Create separate policies** for each generated payload
             7. **Call the CyberArk SCA Tool** with action='create_policy' for each policy payload
+            8. **Extract policy ID** from each policy creation response (look for 'policyId' or 'policy_id' in the response)
+            9. **Verify created policies**: For each created policy, call CyberArk SCA Tool with action='get_policy' and the extracted policy_id to retrieve and verify the policy details
+            10. **Document verification results**: Include the complete policy details from the get_policy API to confirm the policy was created correctly
             
             Requirements: {policy_requirements}
             
@@ -280,14 +347,24 @@ class SecureAgentFlowTasks:
                - IAM Username: original IAM username
                - Created Identity Name: <iam_username>@cyberark.cloud.55567
                - Associated Custom Role: ARN of the custom role for this user
-            4. **Policy Payloads** - The exact JSON payloads used for each policy creation (must include entitySourceId for identities)
-            5. **CyberArk SCA Policy Creation Results** - Response from the SCA tool showing successful policy creation for each user-role combination
-            6. **User-Role-Policy Mapping** - Complete mapping showing:
+            4. **Generated Policy Payloads** - The dynamically generated JSON payloads from the generate_payload_task (must include entitySourceId for identities)
+            5. **CyberArk SCA Policy Creation Results** - Response from the SCA tool showing successful policy creation for each user-role combination, including:
+               - Job IDs for tracking
+               - Policy IDs for each created policy
+               - Final job status (success/failure)
+            6. **Policy Verification Results** - Results from calling get_policy API for each created policy, containing:
+               - Policy ID used for retrieval
+               - Complete policy details retrieved from the API
+               - Verification status (success/failure)
+               - Policy metadata (name, description, status, etc.)
+               - Policy configuration (roles, identities, access rules)
+            7. **User-Role-Policy Mapping** - Complete mapping showing:
                - IAM Username
                - Created Identity User Name and ID
                - Associated Custom Role ARN
                - Created Policy ID and Name
-            7. **Implementation Summary** - Summary of all policies created and their configurations
+               - Policy verification status
+            8. **Implementation Summary** - Summary of all policies created, verified, and their configurations
             
             Format: Professional policy documents with clear procedures, responsibilities, and compliance requirements""",
             callback=send_to_websocket

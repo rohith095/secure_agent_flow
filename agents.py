@@ -2,9 +2,11 @@
 Agents definition for the secure agent flow crew.
 """
 import os
+import boto3
 
 from crewai import Agent
 from crewai_tools.adapters.mcp_adapter import MCPServerAdapter
+from crewai.knowledge.source.json_knowledge_source import JSONKnowledgeSource
 
 from config import Config
 from custom_tools.custom_role_creator import AWSRoleCreator
@@ -69,6 +71,38 @@ class SecureAgentFlowAgents:
             verbose=True,
             allow_delegation=False,
             llm=self.llm
+        )
+
+    def payload_generator_agent(self):
+        """
+        Agent responsible for generating API payloads based on knowledge base.
+        """
+        # Create API documentation knowledge source
+        # CrewAI looks for files in a 'knowledge/' directory relative to where the script runs
+        api_docs_knowledge = JSONKnowledgeSource(
+            file_paths=["Secure Cloud Access APIs.json"],
+            metadata={"source": "sca_api_docs", "version": "2024"}
+        )
+        
+        return Agent(
+            embedder={
+                "provider": "bedrock",
+                "config": {
+                    "model": "amazon.titan-embed-text-v2:0",
+                    "session": boto3.Session(region_name="us-east-1")
+                }
+
+            },
+            role="API Payload Generator",
+            goal="Generate accurate and valid API payloads based on CyberArk API schema and provided context",
+            backstory="""You are an expert in generating API payloads using knowledge bases and API schemas. 
+            You understand the CyberArk Secure Cloud Access API structure and can create valid, 
+            well-formed JSON payloads that match the API specifications exactly. You excel at 
+            extracting information from context and mapping it to the correct API payload structure.""",
+            verbose=True,
+            allow_delegation=False,
+            llm=self.llm,
+            knowledge_sources=[api_docs_knowledge]
         )
 
     def policy_creator_agent(self):
