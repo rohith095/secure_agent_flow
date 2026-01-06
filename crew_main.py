@@ -5,7 +5,7 @@ import os
 
 from crewai import Crew, Process
 from agents import SecureAgentFlowAgents
-from tasks import SecureAgentFlowTasks, send_to_websocket
+from tasks import SecureAgentFlowTasks
 
 
 class SecureAgentFlowCrew:
@@ -39,7 +39,6 @@ class SecureAgentFlowCrew:
             customer_account_id=customer_account_id
         )
 
-
         policy_task = self.tasks.create_policy_task(
             agent=policy_creator,
             policy_requirements=policy_requirements,
@@ -49,7 +48,6 @@ class SecureAgentFlowCrew:
 
         # Set up task dependency - policy_task depends on fetch_task
         policy_task.context = [fetch_task]
-
 
         crew = Crew(
             agents=[roles_fetcher, policy_creator],
@@ -63,16 +61,7 @@ class SecureAgentFlowCrew:
         # Execute the workflow
         try:
             result = crew.kickoff()
-            second_response = {
-                "messageIdRef": 11,
-                "type": 'event',
-                "eventType": 'thinking',
-                "eventStatus": 'completed',
-                "content": 'Processed your request...',
-            }
-            send_to_websocket(second_response)
 
-            send_to_websocket(result)
             return {
                 "success": True,
                 "result": result,
@@ -109,7 +98,8 @@ class SecureAgentFlowCrew:
             'prepare': (self.agents.prepare_agent(),
                         lambda agent: self.tasks.prepare_data_task(agent)),
             'policy': (self.agents.policy_creator_agent(),
-                       lambda agent: self.tasks.create_policy_task(agent, policy_requirements, customer_account_id=customer_account_id))
+                       lambda agent: self.tasks.create_policy_task(agent, policy_requirements,
+                                                                   customer_account_id=customer_account_id))
         }
 
         if task_name not in task_mapping:
@@ -130,7 +120,6 @@ class SecureAgentFlowCrew:
 
         try:
             result = crew.kickoff()
-            send_to_websocket(result)
             return {
                 "success": True,
                 "result": result,
@@ -147,7 +136,7 @@ class SecureAgentFlowCrew:
 if __name__ == "__main__":
     print("Initializing SecureAgentFlowCrew")
     crew = SecureAgentFlowCrew()
-    os.environ["WEBSOCKET_CONNECTION_ID"]= "123456"
+    os.environ["WEBSOCKET_CONNECTION_ID"] = "123456"
     print("Starting workflow execution")
     context_input = """
     Analyze CloudTrail events for a specific AWS IAM user to understand their actual permission usage patterns.

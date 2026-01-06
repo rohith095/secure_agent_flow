@@ -10,8 +10,6 @@ from typing import Any, Dict, Type, Optional
 import logging
 from crewai.tools import BaseTool
 
-from tasks import send_to_websocket
-
 load_dotenv()
 import os
 import requests
@@ -167,7 +165,6 @@ class SCATool(BaseTool):
             "eventStatus": 'loading',
             "content": 'Creating policies in SCA ...',
         }
-        send_to_websocket(initial_response)
         try:
             token = self.get_sca_access_token()
             headers = {
@@ -190,14 +187,6 @@ class SCATool(BaseTool):
             # Wait for job completion
             job_status = self.wait_for_job_completion(job_id)
 
-            initial_response = {
-                "messageIdRef": 16,
-                "type": 'event',
-                "eventType": 'custom3',
-                "eventStatus": 'completed',
-                "content": 'Creating policies in SCA ...',
-            }
-            send_to_websocket(initial_response)
             # Return combined response with policy details and final job status
             return {
                 "policy_response": policy_response,
@@ -224,14 +213,7 @@ class SCATool(BaseTool):
             identity_url = f"{SCA_BASE_URL}/CDirectoryService/CreateUser"
             resp = requests.post(identity_url, json=identity_payload, headers=headers, timeout=REQUEST_TIMEOUT_SEC)
             resp.raise_for_status()
-            initial_response = {
-                "messageIdRef": 15,
-                "type": 'event',
-                "eventType": 'custom2',
-                "eventStatus": 'completed',
-                "content": 'Identity users creation Started ...',
-            }
-            send_to_websocket(initial_response)
+
             return resp.json()
         except Exception as e:
             self.logger.error(f"Error creating identity user: {e}")
@@ -321,15 +303,6 @@ class SCATool(BaseTool):
             # Wait for job completion
             job_status = self.wait_for_job_completion(job_id)
 
-            initial_response = {
-                "messageIdRef": 14,
-                "type": 'event',
-                "eventType": 'custom1',
-                "eventStatus": 'completed',
-                "content": 'Roles Scan Completed ...',
-            }
-            send_to_websocket(initial_response)
-
             # Return combined response with rescan details and final job status
             return {
                 "rescan_response": rescan_response,
@@ -369,14 +342,7 @@ class SCATool(BaseTool):
             return self.create_policy(policy_payload)
 
         elif action == "create_identity_user":
-            initial_response = {
-                "messageIdRef": 15,
-                "type": 'event',
-                "eventType": 'custom2',
-                "eventStatus": 'loading',
-                "content": 'Identity users creation Started ...',
-            }
-            send_to_websocket(initial_response)
+
             # Pass the session to get_aws_secret for cross-account operations
             # tenant_endpoint, service_user_id, service_password = get_aws_secret(session=session)
             tenant_endpoint = TENANT_END_POINT
@@ -385,14 +351,7 @@ class SCATool(BaseTool):
             return self.create_identity_user(tenant_endpoint, service_user_id, service_password, identity_payload)
 
         elif action == "rescan":
-            initial_response = {
-                "messageIdRef": 14,
-                "type": 'event',
-                "eventType": 'custom1',
-                "eventStatus": 'loading',
-                "content": f'Roles Scan Started ...',
-            }
-            send_to_websocket(initial_response)
+
             return self.rescan()
 
         else:
