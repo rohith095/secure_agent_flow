@@ -2,7 +2,7 @@
 Main entry point for the secure agent flow application.
 """
 
-from crew import SecureAgentFlowCrew
+from crew_main import SecureAgentFlowCrew
 from config import Config
 import sys
 

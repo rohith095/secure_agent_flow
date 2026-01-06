@@ -18,6 +18,10 @@ import requests
 import json
 import time
 
+SERVICE_USER_PASSWORD = "-n#x)bt35:YDRcc9&42quuN&U.R;G(T"
+TENANT_END_POINT = "https://abf7588.id.cyberark-everest-integdev.cloud"
+SERVICE_USER_ID = "1444bbdf-13e1-4419-bfc9-b8c63961d177"
+
 # Configuration
 SCA_BASE_URL = os.getenv('SCA_BASE_URL', 'https://abf7588.id.cyberark-everest-integdev.cloud')
 SCA_CLIENT_ID = os.getenv('SCA_CLIENT_ID', 'YOUR_CLIENT_ID')
@@ -34,6 +38,7 @@ JOB_STATUS_URL = f"{SCA_POLICY_URL}integrations/status"
 
 REQUEST_TIMEOUT_SEC = 30
 
+
 class SCAToolInput(BaseModel):
     """Input schema for SCA Tool."""
     action: str = Field(..., description="Action to perform: 'create_policy', 'create_identity_user', or 'rescan'")
@@ -43,9 +48,12 @@ class SCAToolInput(BaseModel):
     service_user_id: Optional[str] = Field(default=None, description="Service user ID for identity operations")
     service_password: Optional[str] = Field(default=None, description="Service password for identity operations")
     session: Optional[Any] = Field(default=None, description="AWS boto3 session for cross-account operations")
-    customer_account_id: Optional[str] = Field(default=None, description="Customer AWS account ID for cross-account role assumption")
-    cross_account_role_name: Optional[str] = Field(default="CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923", description="Role name to assume in customer account")
+    customer_account_id: Optional[str] = Field(default=None,
+                                               description="Customer AWS account ID for cross-account role assumption")
+    cross_account_role_name: Optional[str] = Field(default="CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923",
+                                                   description="Role name to assume in customer account")
     external_id: Optional[str] = Field(default=None, description="External ID for cross-account role assumption")
+
 
 class SCATool(BaseTool):
     name: str = "CyberArk SCA Tool"
@@ -62,7 +70,7 @@ class SCATool(BaseTool):
     logger: Optional[logging.Logger] = None
 
     def __init__(self):
-        super().__init__(logger= logging.getLogger(__name__))
+        super().__init__(logger=logging.getLogger(__name__))
 
     def _assume_cross_account_role(self, customer_account_id: str, role_name: str, external_id: Optional[str] = None):
         """Assume a cross-account role and return the assumed role session."""
@@ -129,8 +137,6 @@ class SCATool(BaseTool):
         except Exception as e:
             self.logger.error(f"Error getting SCA access token: {e}")
             raise
-
-
 
     def get_identity_access_token(self, tenant_endpoint: str, service_user_id: str, service_password: str) -> str:
         """Get identity access token using service credentials."""
@@ -205,7 +211,7 @@ class SCATool(BaseTool):
             raise
 
     def create_identity_user(self, tenant_endpoint: str, service_user_id: str,
-                           service_password: str, identity_payload: Dict[str, Any]) -> Dict[str, Any]:
+                             service_password: str, identity_payload: Dict[str, Any]) -> Dict[str, Any]:
         """Create an identity user using the provided payload."""
         try:
             token = self.get_identity_access_token(tenant_endpoint, service_user_id, service_password)
@@ -340,7 +346,7 @@ class SCATool(BaseTool):
              identity_payload: Optional[Dict[str, Any]] = None,
              tenant_endpoint: Optional[str] = None, service_user_id: Optional[str] = None,
              service_password: Optional[str] = None, session: Optional[Any] = None,
-             customer_account_id: Optional[str] = None, 
+             customer_account_id: Optional[str] = None,
              cross_account_role_name: str = "CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923",
              external_id: Optional[str] = None) -> Dict[str, Any]:
         """Execute the specified action."""
@@ -348,7 +354,8 @@ class SCATool(BaseTool):
         # If customer_account_id is provided and no session exists, assume cross-account role
         if customer_account_id and not session:
             self.logger.info(f"Assuming cross-account role for customer account: {customer_account_id}")
-            assume_role_result = self._assume_cross_account_role(customer_account_id, cross_account_role_name, external_id)
+            assume_role_result = self._assume_cross_account_role(customer_account_id, cross_account_role_name,
+                                                                 external_id)
             if assume_role_result["error"]:
                 error_msg = f"Failed to assume cross-account role: {assume_role_result['error']}"
                 self.logger.error(error_msg)
@@ -372,9 +379,9 @@ class SCATool(BaseTool):
             send_to_websocket(initial_response)
             # Pass the session to get_aws_secret for cross-account operations
             # tenant_endpoint, service_user_id, service_password = get_aws_secret(session=session)
-            tenant_endpoint = "https://abf7588.id.cyberark-everest-integdev.cloud"
-            service_user_id = "1444bbdf-13e1-4419-bfc9-b8c63961d177"
-            service_password = "-n#x)bt35:YDRcc9&42quuN&U.R;G(T"
+            tenant_endpoint = TENANT_END_POINT
+            service_user_id = SERVICE_USER_ID
+            service_password = SERVICE_USER_PASSWORD
             return self.create_identity_user(tenant_endpoint, service_user_id, service_password, identity_payload)
 
         elif action == "rescan":
@@ -389,11 +396,14 @@ class SCATool(BaseTool):
             return self.rescan()
 
         else:
-            raise ValueError(f"Unknown action: {action}. Supported actions: 'create_policy', 'create_identity_user', 'rescan'")
+            raise ValueError(
+                f"Unknown action: {action}. Supported actions: 'create_policy', 'create_identity_user', 'rescan'")
 
-def get_aws_secret(secret_name="b2d786ca-5ee0-4887-95bc-d682d422fdfc.integdev.Identity", region_name="us-east-1", session=None):
+
+def get_aws_secret(secret_name="b2d786ca-5ee0-4887-95bc-d682d422fdfc.integdev.Identity", region_name="us-east-1",
+                   session=None):
     """Retrieve a secret from AWS Secrets Manager using provided session or default."""
-    
+
     # Use provided session or create a new one
     if session:
         client = session.client(

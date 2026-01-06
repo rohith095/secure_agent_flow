@@ -7,7 +7,6 @@ from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSourc
 import sys
 import os
 import boto3
-
 # Add parent directory to path to import config
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import Config
