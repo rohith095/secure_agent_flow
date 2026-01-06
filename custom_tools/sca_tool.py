@@ -167,7 +167,6 @@ class SCATool(BaseTool):
             "eventStatus": 'loading',
             "content": 'Creating policies in SCA ...',
         }
-        send_to_websocket(initial_response)
         try:
             token = self.get_sca_access_token()
             headers = {
@@ -197,7 +196,6 @@ class SCATool(BaseTool):
                 "eventStatus": 'completed',
                 "content": 'Creating policies in SCA ...',
             }
-            send_to_websocket(initial_response)
             # Return combined response with policy details and final job status
             return {
                 "policy_response": policy_response,
@@ -231,7 +229,6 @@ class SCATool(BaseTool):
                 "eventStatus": 'completed',
                 "content": 'Identity users creation Started ...',
             }
-            send_to_websocket(initial_response)
             return resp.json()
         except Exception as e:
             self.logger.error(f"Error creating identity user: {e}")
