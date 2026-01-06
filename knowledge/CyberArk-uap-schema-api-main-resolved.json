@@ -1,0 +1,6142 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Policies",
+    "description": "Create and manage policies that control user access to infrastructure and cloud resources.",
+    "version": "main"
+  },
+  "servers": [
+    {
+      "url": "https://{tenant_subdomain}.uap.cyberark.cloud/api",
+      "description": "Production API",
+      "variables": {
+        "tenant_subdomain": {
+          "default": ""
+        }
+      },
+      "x-internal": false
+    },
+    {
+      "url": "https://virtserver.swaggerhub.com/CyberArk/uap-schema-api/main",
+      "description": "SwaggerHub API Auto Mocking",
+      "x-internal": false
+    }
+  ],
+  "paths": {
+    "/policies": {
+      "get": {
+        "tags": [],
+        "summary": "Get policies",
+        "operationId": "get-policies",
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "query",
+            "description": "Filter query to retrieve access policies. Supported operations: eq (except Identities which supports only contains), or, and. If you want to query on the same field, use \"or\" condition. Use the \"and\" operation to filter on two fields or more. Supported field names: policyTags, identities, targetCategory, status, locationType.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "filter=(((policyTags eq 'a') or (policyTags eq 'b') or (policyTags eq 'c')) and (identities contains 'identity1234') and (targetCategory eq 'VM') and ((status eq 'suspend') or (status eq 'active')) and ((locationType eq 'Azure') or (locationType eq 'GCP')))"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "The maximum number of access policies to return.<br>You can request up to 50 policies.",
+            "required": false,
+            "schema": {
+              "maximum": 50,
+              "minimum": 0,
+              "type": "number",
+              "example": 10,
+              "default": 10
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "The field name by which to sort the results.<br>Currently results can be sorted  by \"createdBy\" only.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nextToken",
+            "in": "query",
+            "description": "The token from the previous API response.<br>To retrieve the next N results, use  DS1_10;DS2_20.<br>This means that the service will retrieve 10 results from DS_1 and 20 results from DS_2.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Use this for a free text search on **policy name** and **description**.",
+            "required": false,
+            "schema": {
+              "maxLength": 200,
+              "type": "string",
+              "example": "\"access to production\""
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-stoplight": {
+          "id": "qlq18osng9d6g"
+        }
+      },
+      "post": {
+        "tags": [],
+        "summary": "Create a policy",
+        "operationId": "post-policies",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessPolicy"
+              },
+              "examples": {
+                "Create AWS IAM policy": {
+                  "$ref": "#/components/examples/Create_aws_iam_policy"
+                },
+                "Create AWS IAM Identity Center policy": {
+                  "$ref": "#/components/examples/Create_aws_idc_policy"
+                },
+                "Create GCP polcy - organization level": {
+                  "$ref": "#/components/examples/Create_gcp_policy_org_level"
+                },
+                "Create GCP policy - folder level": {
+                  "$ref": "#/components/examples/Create_gcp_policy_folder_level"
+                },
+                "Create GCP policy - project level": {
+                  "$ref": "#/components/examples/Create_gcp_policy_project_level"
+                },
+                "Create Azure resource policy": {
+                  "$ref": "#/components/examples/Create_azure_resource_policy"
+                },
+                "Create Microsoft Entra ID policy - entire directory": {
+                  "$ref": "#/components/examples/Create_azure_entra_policy"
+                },
+                "Create Azure policy - management group scope": {
+                  "$ref": "#/components/examples/Create_azure_managementgroup_policy"
+                },
+                "Create Azure policy - subscription scope": {
+                  "$ref": "#/components/examples/Create_azure_subscription_policy"
+                },
+                "Create Azure policy - resource group scope": {
+                  "$ref": "#/components/examples/Create_azure_resourcegroup_policy"
+                },
+                "Create infrastructure policy - VM": {
+                  "$ref": "#/components/examples/Create_aws_vm_policy"
+                },
+                "Create Infrastructure policy - DB": {
+                  "$ref": "#/components/examples/Create_infra_db_policy"
+                },
+                "Create Azure Group policy": {
+                  "$ref": "#/components/examples/Create_azure_group_policy"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "headers": {
+              "RateLimit-Limit": {
+                "description": "The number of allowed requests in the current period.",
+                "schema": {
+                  "maximum": 1000,
+                  "minimum": 0,
+                  "type": "integer",
+                  "format": "int32"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "headers": {
+              "RateLimit": {
+                "schema": {
+                  "maximum": 1000,
+                  "type": "integer",
+                  "format": "int32"
+                }
+              },
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-stoplight": {
+          "id": "qjickm14qnhsc"
+        }
+      }
+    },
+    "/policies/{policyId}": {
+      "get": {
+        "tags": [],
+        "summary": "Get policy",
+        "description": "Returns the details about a specific access policy",
+        "operationId": "get-policy",
+        "parameters": [
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "maxLength": 99,
+              "minLength": 1,
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessPolicy"
+                },
+                "examples": {
+                  "Cloud console - Get AWS IAM policy": {
+                    "$ref": "#/components/examples/Get_aws_iam_policy"
+                  },
+                  "Cloud console - Get AWS IAM Identity Center policy": {
+                    "$ref": "#/components/examples/Get_aws_idc_policy"
+                  },
+                  "Cloud console - Get Google Cloud policy": {
+                    "$ref": "#/components/examples/Get_gcp_policy"
+                  },
+                  "Cloud console - Get Azure resource policy": {
+                    "$ref": "#/components/examples/Get_azure_resource_policy"
+                  },
+                  "Cloud console - Get Microsoft Entra ID policy": {
+                    "$ref": "#/components/examples/Get_entra_policy"
+                  },
+                  "Infrastructure - Get VM policy": {
+                    "$ref": "#/components/examples/Get_aws_vm_policy"
+                  },
+                  "Infrastructure - Get DB Policy": {
+                    "$ref": "#/components/examples/Get_infra_db_policy"
+                  },
+                  "Azure Group - Get Policy": {
+                    "$ref": "#/components/examples/Get_azure_group_policy"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-stoplight": {
+          "id": "ijsqypjpawz4a"
+        }
+      },
+      "put": {
+        "tags": [],
+        "summary": "Edit policy",
+        "description": "Modifies an access policy.",
+        "operationId": "put-policies",
+        "parameters": [
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "maxLength": 99,
+              "minLength": 1,
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessPolicy"
+              },
+              "examples": {
+                "Cloud console - Edit AWS IAM policy": {
+                  "$ref": "#/components/examples/Edit_aws_idc_policy"
+                },
+                "Cloud console - Edit AWS IAM Identity Center policy": {
+                  "value": {
+                    "metadata": {
+                      "policyId": "fg55dvba-4d5f-5712-8fda-da03cedvab10",
+                      "name": "Access policy for Cosmos DB",
+                      "description": "string",
+                      "status": {
+                        "status": "Active",
+                        "statusCode": "string",
+                        "statusDescription": "string",
+                        "link": "string"
+                      },
+                      "policyTags": [
+                        "string"
+                      ],
+                      "timeFrame": {
+                        "fromTime": "2019-08-24T14:15:22Z",
+                        "toTime": "2019-08-24T14:15:22Z"
+                      },
+                      "createdBy": {
+                        "user": "string",
+                        "time": "2019-08-24T14:15:22Z"
+                      },
+                      "updatedBy": {
+                        "user": "string",
+                        "time": "2019-08-24T14:15:22Z"
+                      },
+                      "policyEntitlement": {
+                        "targetCategory": "VM, DB, Cloud Console",
+                        "locationType": "AWS, GCP, Azure, FQDN/IP",
+                        "policyType": "Recurring"
+                      }
+                    },
+                    "principals": [
+                      {
+                        "id": "string",
+                        "name": "string",
+                        "sourceDirectoryName": "string",
+                        "sourceDirectoryId": "string",
+                        "type": "USER"
+                      }
+                    ],
+                    "delegationClassification": "Restricted",
+                    "conditions": {
+                      "accessWindow": {
+                        "timeZone": "string",
+                        "daysOfTheWeek": 0,
+                        "fromHour": "string",
+                        "toHour": "string"
+                      },
+                      "maxSessionDuration": 0,
+                      "idleTime": 10
+                    },
+                    "targets": {
+                      "AWS": {
+                        "regions": [
+                          "string"
+                        ],
+                        "tags": [
+                          {
+                            "key": "string",
+                            "value": [
+                              "string"
+                            ]
+                          }
+                        ],
+                        "vpcIds": [
+                          "string"
+                        ],
+                        "accountIds": [
+                          "string"
+                        ]
+                      }
+                    },
+                    "behavior": {
+                      "connectAs": {
+                        "ssh": {
+                          "username": "string"
+                        },
+                        "rdp": {
+                          "localEphemeralUser": {
+                            "assignGroups": [
+                              "string"
+                            ],
+                            "enableEphemeralUserReconnect": false
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "Cloud console - Edit Coogle Cloud policy": {
+                  "$ref": "#/components/examples/Edit_gcp_policy"
+                },
+                "Cloud console - Edit Azure resources policy": {
+                  "$ref": "#/components/examples/Edit_azure_resource_policy"
+                },
+                "Cloud console - Edit Microsoft Entra ID policy": {
+                  "$ref": "#/components/examples/Edit_azure_entra_policy"
+                },
+                "Infrastructure - Edit VM policy": {
+                  "$ref": "#/components/examples/Edit_aws_vm_policy"
+                },
+                "Azure Group - Edit policy": {
+                  "$ref": "#/components/examples/Edit_azure_group_policy"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            },
+            "content": {}
+          },
+          "400": {
+            "description": "Bad Request",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-stoplight": {
+          "id": "owa821q91o03b"
+        }
+      },
+      "delete": {
+        "tags": [],
+        "summary": "Delete policy",
+        "operationId": "delete-policies",
+        "parameters": [
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "maxLength": 99,
+              "minLength": 1,
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "maxLength": 100,
+                  "pattern": "\\w+",
+                  "type": "string",
+                  "example": "[\"https://uap.cyberark.cloud.com\"]"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-stoplight": {
+          "id": "5tpqdxg6sky7z"
+        }
+      }
+    },
+    "/policies/{policyId}/validate": {
+      "post": {
+        "tags": [],
+        "summary": "Validate policy",
+        "description": "Triggers a policy validation.\nIf the response is \"Validating\", then you need to call the Get policy API to check the final status.\n\n* Relevant for cloud console policies only.",
+        "operationId": "validate-policy",
+        "parameters": [
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_2"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-stoplight": {
+          "id": "84ns7ev2dga45"
+        },
+        "x-internal": false
+      }
+    },
+    "/policies/indication": {
+      "get": {
+        "tags": [],
+        "summary": "Get service indication",
+        "operationId": "policies-indication",
+        "parameters": [
+          {
+            "name": "serviceName",
+            "in": "query",
+            "description": "The name of the service you are querying to determine if it is managed in UAP. Possible values - sca, sia",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "description": "Internal parameter that will be valid only when providing internal token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "identityId",
+            "in": "query",
+            "description": "Internal parameter that will be valid only when providing internal token",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_3"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-stoplight": {
+          "id": "2blifsvnz8c69"
+        },
+        "x-internal": true
+      }
+    },
+    "/policies/migrate": {
+      "post": {
+        "tags": [],
+        "summary": "Migration Completion Update",
+        "description": "When the API is triggered, policy management in the Administration space (UAP) will be enables on the service and tenant level.",
+        "operationId": "post-policies-migrate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/policies_migrate_body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-stoplight": {
+          "id": "a5vq4nmh2agyl"
+        },
+        "x-internal": true
+      }
+    },
+    "/policies/migrate/rollback": {
+      "post": {
+        "tags": [],
+        "summary": "Rollback Migration",
+        "description": "API to rollback the transition of a standalone access policy to UAP",
+        "operationId": "post-policies-migrate-rollback",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/migrate_rollback_body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-stoplight": {
+          "id": "b91hvy86jzmrg"
+        },
+        "x-internal": true
+      }
+    },
+    "/policies/migrate/validation": {
+      "post": {
+        "tags": [],
+        "summary": "Validate Policy Uniqueness",
+        "operationId": "get-policies-migrate-validation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/migrate_validation_body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_4"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-stoplight": {
+          "id": "qyzudy57m67ue"
+        },
+        "x-internal": true
+      }
+    },
+    "/policies/sync": {
+      "post": {
+        "tags": [],
+        "summary": "Sync Policies",
+        "operationId": "post-policies-sync",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/policies_sync_body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200_5"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-stoplight": {
+          "id": "drcg99ohgc38w"
+        },
+        "x-internal": true
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CommonAccessPolicy": {
+        "type": "object",
+        "properties": {
+          "metadata": {
+            "$ref": "#/components/schemas/CommonAccessPolicy_metadata"
+          },
+          "principals": {
+            "type": "array",
+            "x-stoplight": {
+              "id": "5v245pbxpiiex"
+            },
+            "items": {
+              "$ref": "#/components/schemas/Principal"
+            }
+          },
+          "delegationClassification": {
+            "type": "string",
+            "readOnly": true,
+            "x-stoplight": {
+              "id": "hxqm1xypfti2i"
+            },
+            "enum": [
+              "Restricted",
+              "Unrestricted"
+            ]
+          },
+          "conditions": {
+            "$ref": "#/components/schemas/Conditions"
+          }
+        },
+        "description": "Fields common to all access policies",
+        "x-examples": {},
+        "x-stoplight": {
+          "id": "vpngyqy9226cd"
+        }
+      },
+      "PolicyEntitlement": {
+        "title": "PolicyEntitlement",
+        "required": [
+          "locationType",
+          "targetCategory"
+        ],
+        "type": "object",
+        "properties": {
+          "targetCategory": {
+            "type": "string",
+            "description": "The category of the target:<br>\n- **Cloud access**: Cloud Console\n- **Infrastructure access:** VM, DB",
+            "example": "VM, DB, Cloud Console",
+            "x-stoplight": {
+              "id": "umh5vk9zin6zn"
+            },
+            "enum": [
+              "Cloud Console",
+              "VM",
+              "DB"
+            ]
+          },
+          "locationType": {
+            "type": "string",
+            "description": "The location of the target:<br>\n- **Cloud access:** AWS, Azure, GCP <br>\n- **Instrastructure access:** FQDN/IP",
+            "example": "AWS, GCP, Azure, FQDN/IP",
+            "x-stoplight": {
+              "id": "lz6g9i7uanpxv"
+            },
+            "enum": [
+              "AWS",
+              "Azure",
+              "GCP",
+              "FQDN/IP"
+            ]
+          },
+          "policyType": {
+            "type": "string",
+            "description": "The type of policy - recurring or on-demand.\nDefault - Recurring",
+            "x-stoplight": {
+              "id": "ufg8w1by10e4w"
+            },
+            "enum": [
+              "Recurring",
+              "OnDemand"
+            ]
+          }
+        },
+        "x-stoplight": {
+          "id": "jlcgz24vrfmpt"
+        }
+      },
+      "Principal": {
+        "title": "Principal",
+        "required": [
+          "id",
+          "name",
+          "sourceDirectoryId",
+          "sourceDirectoryName",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "maxLength": 40,
+            "type": "string",
+            "description": "The unique identifier of the identity in CyberArk. An identity is a user, group, or role",
+            "x-stoplight": {
+              "id": "byjjl6j4wa92g"
+            }
+          },
+          "name": {
+            "maxLength": 512,
+            "minLength": 1,
+            "pattern": "[\\w.\\-+]+",
+            "type": "string",
+            "description": "The name of the principal",
+            "x-stoplight": {
+              "id": "yk8i1sfc6r3n7"
+            }
+          },
+          "sourceDirectoryName": {
+            "maxLength": 256,
+            "pattern": "\\w+",
+            "type": "string",
+            "description": "The name of the directory service.\nIf the type is ROLE, then this field is optional.",
+            "x-stoplight": {
+              "id": "zr58ooz562p9y"
+            }
+          },
+          "sourceDirectoryId": {
+            "type": "string",
+            "description": "The unique identifier of the directory service.\nIf the type is ROLE, then this field is optional.",
+            "x-stoplight": {
+              "id": "ebwob4ocq8sih"
+            }
+          },
+          "type": {
+            "type": "string",
+            "description": "The type of principal",
+            "x-stoplight": {
+              "id": "d5rkugq4tvdbl"
+            },
+            "enum": [
+              "USER",
+              "ROLE",
+              "GROUP"
+            ]
+          }
+        },
+        "description": "The identity: user, group, role",
+        "x-stoplight": {
+          "id": "3ief0tgqwydbr"
+        },
+        "x-examples": {}
+      },
+      "TimeCondition": {
+        "title": "TimeCondition",
+        "type": "object",
+        "properties": {
+          "daysOfTheWeek": {
+            "type": "array",
+            "description": "The days of the week to include in the policy's access, where Sunday=0, Monday=1,..., Saturday=6",
+            "x-stoplight": {
+              "id": "k4gu3dn7jxz0a"
+            },
+            "items": {
+              "type": "number",
+              "x-stoplight": {
+                "id": "msvm78w38kp8n"
+              },
+              "enum": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ]
+            }
+          },
+          "fromHour": {
+            "pattern": "\\w+",
+            "type": "string",
+            "description": "The start time of the policy's access window",
+            "x-stoplight": {
+              "id": "skqw4cnjuhi7b"
+            }
+          },
+          "toHour": {
+            "pattern": "\\w+",
+            "type": "string",
+            "description": "The end time of the policy's access window",
+            "x-stoplight": {
+              "id": "xveprcb7eaxp3"
+            }
+          }
+        },
+        "description": "The days and times when the user can connect to their target using this policy",
+        "x-stoplight": {
+          "id": "6mfv0ptxednhz"
+        }
+      },
+      "ErrorResponse": {
+        "title": "ErrorResponse",
+        "required": [
+          "code",
+          "description",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "maxLength": 99,
+            "type": "string",
+            "description": "The error code",
+            "x-stoplight": {
+              "id": "9gb35p96zem59"
+            },
+            "default": "UAP9999"
+          },
+          "message": {
+            "maxLength": 255,
+            "type": "string",
+            "description": "The error heading",
+            "x-stoplight": {
+              "id": "qwjpepfsmhf7h"
+            },
+            "default": "General Error"
+          },
+          "description": {
+            "maxLength": 1000,
+            "type": "string",
+            "description": "Detailed description of the error",
+            "x-stoplight": {
+              "id": "g7iohfh1k4ycb"
+            },
+            "default": "General Error"
+          },
+          "link": {
+            "maxLength": 255,
+            "type": "string",
+            "description": "Link to documentation when available",
+            "x-stoplight": {
+              "id": "hhjkttjbjfstf"
+            }
+          }
+        },
+        "description": "Details of an error response",
+        "x-stoplight": {
+          "id": "v1y2df85ix5mo"
+        }
+      },
+      "PolicyStatus": {
+        "title": "PolicyStatus",
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "The status of the policy",
+            "x-stoplight": {
+              "id": "txtxqczpxhp42"
+            },
+            "enum": [
+              "Active",
+              "Suspended",
+              "Expired",
+              "Validating",
+              "Error",
+              "Warning"
+            ]
+          },
+          "statusCode": {
+            "maxLength": 99,
+            "type": "string",
+            "description": "The status code",
+            "x-stoplight": {
+              "id": "hraeu0kooy5uq"
+            }
+          },
+          "statusDescription": {
+            "maxLength": 1000,
+            "type": "string",
+            "description": "A description of the status",
+            "x-stoplight": {
+              "id": "9jh95vn1pd24e"
+            }
+          },
+          "link": {
+            "maxLength": 255,
+            "type": "string",
+            "description": "Link to documentation when available",
+            "x-stoplight": {
+              "id": "u0i19tnl01z8v"
+            }
+          }
+        },
+        "description": "The status of the policy",
+        "readOnly": true,
+        "x-stoplight": {
+          "id": "2q0ysac22381v"
+        },
+        "x-examples": {}
+      },
+      "Conditions": {
+        "title": "Conditions",
+        "type": "object",
+        "properties": {
+          "accessWindow": {
+            "$ref": "#/components/schemas/TimeCondition"
+          },
+          "maxSessionDuration": {
+            "maximum": 24,
+            "minimum": 1,
+            "type": "integer",
+            "description": "The maximum length of time a user can remain connected in a single session.<br>\nMaximum:\n* 12 hours for Cloud Access\n* 24 hours for VM and DB Access\n",
+            "format": "int32",
+            "x-stoplight": {
+              "id": "5ihmhk97jcri2"
+            },
+            "default": 1
+          }
+        },
+        "description": "The allowed session length, and the access window (days and times) during which a session can be started.",
+        "x-stoplight": {
+          "id": "goq3456jeg0y7"
+        }
+      },
+      "AccessPolicy": {
+        "type": "object",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/InfrastructureVirtualMachineAccessPolicy"
+          },
+          {
+            "$ref": "#/components/schemas/InfrastructureDatabaseAccessPolicy"
+          },
+          {
+            "$ref": "#/components/schemas/CloudConsoleAccessPolicy"
+          },
+          {
+            "$ref": "#/components/schemas/GroupAccessPolicy"
+          }
+        ]
+      },
+      "InfrastructureConditions": {
+        "title": "InfrastructureConditions",
+        "type": "object",
+        "properties": {
+          "idleTime": {
+            "maximum": 120,
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "type": "integer",
+            "description": "The maximum idle time (in minutes) before the session ends",
+            "x-stoplight": {
+              "id": "wdyxejl67tf6h"
+            },
+            "default": 10
+          }
+        },
+        "description": "Additional conditions for infrastructure access",
+        "x-stoplight": {
+          "id": "ld1xbug8szzf5"
+        }
+      },
+      "InfrastructureCommonAccessPolicy": {
+        "title": "InfrastructureCommonAccessPolicy",
+        "type": "object",
+        "description": "Infrastructure access policy details",
+        "x-stoplight": {
+          "id": "r05pqg9co2rmc"
+        },
+        "x-examples": {},
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CommonAccessPolicy"
+          },
+          {
+            "required": [
+              "conditions"
+            ],
+            "properties": {
+              "conditions": {
+                "$ref": "#/components/schemas/InfrastructureConditions"
+              }
+            },
+            "x-stoplight": {
+              "id": "rfxbrr8ttex20"
+            }
+          }
+        ]
+      },
+      "InfrastructureVirtualMachineAccessPolicy": {
+        "title": "InfrastructureVirtualMachineAccessPolicy",
+        "type": "object",
+        "description": "Infrastructure access policy details",
+        "x-stoplight": {
+          "id": "lsav2656djzvd"
+        },
+        "x-examples": {
+          "Example 1": {
+            "metadata": {
+              "policyId": "fg55dvba-4d5f-5712-8fda-da03cedvab10",
+              "name": "Access Policy for Cosmos DB",
+              "description": "string",
+              "status": {
+                "status": "Active",
+                "statusCode": "string",
+                "statusDescription": "string",
+                "link": "string"
+              },
+              "policyTags": [
+                "string"
+              ],
+              "timeFrame": {
+                "fromTime": "2019-08-24T14:15:22Z",
+                "toTime": "2019-08-24T14:15:22Z"
+              },
+              "createdBy": {
+                "user": "string",
+                "time": "2019-08-24T14:15:22Z"
+              },
+              "updatedBy": {
+                "user": "string",
+                "time": "2019-08-24T14:15:22Z"
+              },
+              "policyEntitlement": {
+                "targetCategory": "VM, DB, Cloud Console",
+                "locationType": "AWS, GCP, Azure, FQDN/IP",
+                "policyType": "Recurring"
+              }
+            },
+            "principals": [
+              {
+                "id": "string",
+                "name": "string",
+                "sourceDirectoryName": "string",
+                "sourceDirectoryId": "string",
+                "type": "USER"
+              }
+            ],
+            "delegationClassification": "Restricted",
+            "conditions": {
+              "accessWindow": {
+                "timeZone": "string",
+                "daysOfTheWeek": 0,
+                "fromHour": "string",
+                "toHour": "string"
+              },
+              "maxSessionDuration": 0,
+              "idleTime": 0
+            },
+            "targets": {
+              "AWS": {
+                "regions": [
+                  "string"
+                ],
+                "tags": [
+                  {
+                    "key": "string",
+                    "value": [
+                      "string"
+                    ]
+                  }
+                ],
+                "vpcIds": [
+                  "string"
+                ],
+                "accountIds": [
+                  "string"
+                ]
+              }
+            },
+            "behavior": {
+              "connectAs": {
+                "ssh": {
+                  "username": "string"
+                },
+                "rdp": {
+                  "localEphemeralUser": {
+                    "assignGroups": [
+                      "string"
+                    ],
+                    "enableEphemeralUserReconnect": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/InfrastructureCommonAccessPolicy"
+          },
+          {
+            "required": [
+              "targets"
+            ],
+            "properties": {
+              "targets": {
+                "$ref": "#/components/schemas/InfrastructureVirtualMachineTarget"
+              }
+            },
+            "x-stoplight": {
+              "id": "4s2ft5e7xv3af"
+            }
+          },
+          {
+            "required": [
+              "behavior"
+            ],
+            "properties": {
+              "behavior": {
+                "$ref": "#/components/schemas/InfrastructureVirtualMachineBehavior"
+              }
+            },
+            "x-stoplight": {
+              "id": "10m5jgxaezngu"
+            }
+          }
+        ]
+      },
+      "InfrastructureVirtualMachineTarget": {
+        "title": "InfrastructureVirtualMachineTarget",
+        "type": "object",
+        "description": "Details of VM targets per location.",
+        "x-stoplight": {
+          "id": "5940xxh9h2l0c"
+        },
+        "oneOf": [
+          {
+            "properties": {
+              "AWS": {
+                "$ref": "#/components/schemas/InfrastructureVirtualMachineTarget_AWS"
+              }
+            }
+          },
+          {
+            "properties": {
+              "Azure": {
+                "$ref": "#/components/schemas/InfrastructureVirtualMachineTarget_Azure"
+              }
+            },
+            "x-stoplight": {
+              "id": "jfzt53895b02j"
+            }
+          },
+          {
+            "properties": {
+              "GCP": {
+                "$ref": "#/components/schemas/InfrastructureVirtualMachineTarget_GCP"
+              }
+            },
+            "x-stoplight": {
+              "id": "eqw437jk9euzo"
+            }
+          },
+          {
+            "properties": {
+              "FQDN/IP": {
+                "$ref": "#/components/schemas/InfrastructureVirtualMachineTarget_FQDNIP"
+              }
+            },
+            "x-stoplight": {
+              "id": "4rwyhrtqxrwfq"
+            }
+          }
+        ]
+      },
+      "InfrastructureVirtualMachineBehavior": {
+        "title": "InfrastructureVirtualMachineBehavior",
+        "required": [
+          "connectAs"
+        ],
+        "type": "object",
+        "properties": {
+          "connectAs": {
+            "$ref": "#/components/schemas/InfrastructureVirtualMachineBehavior_connectAs"
+          }
+        },
+        "x-stoplight": {
+          "id": "0nvxs8ll118fu"
+        }
+      },
+      "CloudConsoleAccessPolicy": {
+        "title": "CloudConsoleAccessPolicy",
+        "type": "object",
+        "x-stoplight": {
+          "id": "dp8gpf9owjp8r"
+        },
+        "x-examples": {},
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CommonAccessPolicy"
+          },
+          {
+            "properties": {
+              "targets": {
+                "type": "array",
+                "x-stoplight": {
+                  "id": "sqhr67feqngex"
+                },
+                "items": {
+                  "$ref": "#/components/schemas/CloudConsoleTarget"
+                }
+              },
+              "invalidResources": {
+                "$ref": "#/components/schemas/CloudInvalidResources"
+              }
+            },
+            "x-stoplight": {
+              "id": "d7irnr0fz5sbk"
+            }
+          }
+        ]
+      },
+      "GroupAccessPolicy": {
+        "title": "GroupAccessPolicy",
+        "type": "object",
+        "x-examples": {},
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CommonAccessPolicy"
+          },
+          {
+            "properties": {
+              "targets": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/AzureGroupTarget"
+                }
+              },
+              "invalidResources": {
+                "$ref": "#/components/schemas/CloudInvalidResources"
+              }
+            }
+          }
+        ]
+      },
+      "CloudConsoleTarget": {
+        "title": "CloudConsoleTarget",
+        "type": "object",
+        "description": "The types of cloud consoles that you can connect to",
+        "x-stoplight": {
+          "id": "helskxkutdo9o"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/AWSAccountTarget"
+          },
+          {
+            "$ref": "#/components/schemas/AWSOrganizationTarget"
+          },
+          {
+            "$ref": "#/components/schemas/AzureTarget"
+          },
+          {
+            "$ref": "#/components/schemas/GCPTarget"
+          }
+        ]
+      },
+      "AWSAccountTarget": {
+        "title": "AWSAccountTarget",
+        "required": [
+          "roleId",
+          "workspaceId"
+        ],
+        "type": "object",
+        "properties": {
+          "roleId": {
+            "type": "string",
+            "description": "The unique identifier assigned to the IAM role in AWS (IAM role ARN)",
+            "x-stoplight": {
+              "id": "vccmyixn2fwo0"
+            }
+          },
+          "workspaceId": {
+            "type": "string",
+            "description": "The ID given to the standalone AWS account workspace when it was oboarded to CyberArk",
+            "x-stoplight": {
+              "id": "5m44wpp92cnwd"
+            }
+          }
+        },
+        "description": "AWS account details",
+        "x-stoplight": {
+          "id": "pfmq87khedy1t"
+        },
+        "x-examples": {
+          "Example 1": {
+            "roleId": "string",
+            "workspaceId": "arn:aws:iam::123451234567:role/examplerole"
+          }
+        }
+      },
+      "AWSOrganizationTarget": {
+        "title": "AWSOrganizationTarget",
+        "required": [
+          "orgId",
+          "roleId",
+          "workspaceId"
+        ],
+        "type": "object",
+        "properties": {
+          "roleId": {
+            "type": "string",
+            "description": "The unique identifier assigned to the IAM role in AWS (IAM role ARN)",
+            "example": "arn:aws:iam::123451234567:role/examplerole",
+            "x-stoplight": {
+              "id": "a8a9dm8cjm1pe"
+            }
+          },
+          "orgId": {
+            "type": "string",
+            "description": "Management account ID (required only for AWS IAM Identity Center)",
+            "x-stoplight": {
+              "id": "s7vtgclj3oz2r"
+            }
+          },
+          "workspaceId": {
+            "type": "string",
+            "description": "The ID given to the AWS organization workspace when it was oboarded to CyberArk\n",
+            "x-stoplight": {
+              "id": "gjzuzb5xkc8wn"
+            }
+          }
+        },
+        "description": "AWS organization workspace details",
+        "x-stoplight": {
+          "id": "rsq6flrpxsppj"
+        },
+        "x-examples": {
+          "Example 1": {
+            "roleId": "arn:aws:iam::123451234567:role/examplerole",
+            "orgId": "string",
+            "workspaceId": "string"
+          },
+          "Example 2": {
+            "roleId": "arn:aws:sso:::permissionSet/ssoins-72235cceabaa3b3b/ps-05cd0b0e0d0259da",
+            "orgId": "string",
+            "workspaceId": "string"
+          }
+        }
+      },
+      "AzureTarget": {
+        "title": "AzureTarget",
+        "required": [
+          "orgId",
+          "roleId",
+          "workspaceId",
+          "workspaceType"
+        ],
+        "type": "object",
+        "properties": {
+          "roleId": {
+            "type": "string",
+            "description": "The identifier of Azure resource role or Entra ID role",
+            "example": "For Azure resource role: /subscriptions/xxxxxxx/providers/Microsoft.Authorization/roleDefinitions/c025889f-8102-4ebf-b32c-fc0c6f0c6bd9. For EntraId roles, provide the Guid of the role - c025889f-8102-4ebf-b32c-fc0c6f0c6bd9",
+            "x-stoplight": {
+              "id": "1n1skprnccdwf"
+            }
+          },
+          "orgId": {
+            "type": "string",
+            "description": "Azure directory ID (UUID)",
+            "format": "uuid",
+            "x-stoplight": {
+              "id": "kkrqz22b5m6sm"
+            }
+          },
+          "workspaceId": {
+            "type": "string",
+            "description": "The ID given to the Microsoft Entra ID workspace when it was oboarded to CyberArk\n",
+            "x-stoplight": {
+              "id": "2lmdu5dzfh6z8"
+            }
+          },
+          "workspaceType": {
+            "type": "string",
+            "description": "The level at which the Microsoft Entra ID workspace was onboarded to CyberArk",
+            "x-stoplight": {
+              "id": "6vtye28igyxdh"
+            },
+            "enum": [
+              "Directory",
+              "Management Group",
+              "Subscription",
+              "Resource Group",
+              "Resource"
+            ]
+          }
+        },
+        "description": "Microsoft Entra ID workspace details",
+        "x-stoplight": {
+          "id": "t94xmmgdk7y9s"
+        },
+        "x-examples": {
+          "Example 1": {
+            "roleId": "For Azure resource role: /subscriptions/xxxxxxx/providers/Microsoft.Authorization/roleDefinitions/c025889f-8102-4ebf-b32c-fc0c6f0c6bd9. For EntraId roles, provide the Guid of the role - c025889f-8102-4ebf-b32c-fc0c6f0c6bd9",
+            "orgId": "25b2c2d5-a7fc-47d0-89e4-8709a1560bfa",
+            "workspaceId": "string",
+            "workspaceType": "Directory"
+          }
+        }
+      },
+      "AzureGroupTarget": {
+        "title": "",
+        "required": [
+          "directoryId",
+          "groupId"
+        ],
+        "type": "object",
+        "properties": {
+          "groupId": {
+            "type": "string",
+            "description": "Azure Group ID (UUID)",
+            "format": "uuid"
+          },
+          "directoryId": {
+            "type": "string",
+            "description": "Azure Directory ID (UUID)",
+            "format": "uuid"
+          },
+          "groupName": {
+            "type": "string",
+            "description": "Display name of the Azure AD group",
+            "readOnly": true,
+            "example": "AAD_Dev"
+          },
+          "directoryName": {
+            "type": "string",
+            "description": "Azure Directory display name",
+            "readOnly": true,
+            "example": "280a06f4-3f9b-4910-8967-053a914e314e"
+          },
+          "groupType": {
+            "type": "string",
+            "description": "Type of the Azure AD group",
+            "readOnly": true,
+            "example": "security",
+            "enum": [
+              "security",
+              "microsoft365"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional group description",
+            "nullable": true,
+            "readOnly": true
+          }
+        },
+        "description": "Azure Active Directory group target",
+        "x-examples": {
+          "Example 1": {
+            "groupId": "c63819e2-2397-4faa-850f-4abde34e52fb",
+            "directoryId": "280a06f4-3f9b-4910-8967-053a914e314e"
+          }
+        }
+      },
+      "GCPTarget": {
+        "title": "GCPTarget",
+        "required": [
+          "roleId",
+          "workspaceId",
+          "workspaceType"
+        ],
+        "type": "object",
+        "properties": {
+          "roleId": {
+            "type": "string",
+            "description": "The Google Cloud role and hierarchy structure",
+            "example": "projects/dev/roles/CustomRole",
+            "x-stoplight": {
+              "id": "vxtbkvsn1g43g"
+            }
+          },
+          "orgId": {
+            "type": "string",
+            "description": "The Google Cloud organization ID",
+            "x-stoplight": {
+              "id": "0cv4w9apjpgn4"
+            }
+          },
+          "workspaceId": {
+            "type": "string",
+            "description": "The ID given to the Google Cloud workspace when it was oboarded to CyberArk\n",
+            "x-stoplight": {
+              "id": "qj8cvsj39e9ez"
+            }
+          },
+          "workspaceType": {
+            "type": "string",
+            "description": "The level at which the Google Cloud organiztion workspace was onboarded to CyberArk",
+            "x-stoplight": {
+              "id": "fec8fux9toky1"
+            },
+            "enum": [
+              "Organization",
+              "Folder",
+              "Project"
+            ]
+          },
+          "domainName": {
+            "type": "string",
+            "description": "The Google Cloud Workspace",
+            "example": "mygcpdomain.com",
+            "x-stoplight": {
+              "id": "cmpwlbs07th1b"
+            }
+          }
+        },
+        "description": "Google Cloud workspace details",
+        "x-stoplight": {
+          "id": "1clvo0ccmq1mt"
+        },
+        "x-examples": {
+          "Example 1": {
+            "roleId": "projects/dev/roles/CustomRole",
+            "workspaceId": "string",
+            "orgId": "string",
+            "workspaceType": "Organization"
+          }
+        }
+      },
+      "ChangeInfo": {
+        "title": "ChangeInfo",
+        "required": [
+          "time",
+          "user"
+        ],
+        "type": "object",
+        "properties": {
+          "user": {
+            "maxLength": 512,
+            "minLength": 1,
+            "pattern": "[\\w.\\-+]+",
+            "type": "string",
+            "description": "The name of the user that modified the policy (read-only)",
+            "readOnly": true,
+            "x-stoplight": {
+              "id": "vpqq89ok21x4g"
+            }
+          },
+          "time": {
+            "type": "string",
+            "description": "The date and time the policy was created or modified (read-only)",
+            "format": "date-time",
+            "readOnly": true,
+            "x-stoplight": {
+              "id": "an504kzj5kfhd"
+            }
+          }
+        },
+        "description": "Logs who created or modified the policy and when",
+        "readOnly": true,
+        "x-stoplight": {
+          "id": "he8tmh3jqopq1"
+        }
+      },
+      "ActionStatus": {
+        "title": "ActionStatus",
+        "required": [
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Indicates if the action completed or failed.",
+            "x-stoplight": {
+              "id": "hcqvhmd0ldd0g"
+            },
+            "enum": [
+              "SUCCESS",
+              "FAILURE"
+            ]
+          },
+          "additionalInfo": {
+            "type": "string",
+            "x-stoplight": {
+              "id": "li6udxbbvwtxq"
+            }
+          }
+        },
+        "x-stoplight": {
+          "id": "5bc34ad7o0z2y"
+        },
+        "x-internal": true
+      },
+      "UniquenessValidationRequest": {
+        "title": "UniquenessValidationRequest",
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "A unique identifier of the object to validate",
+            "x-stoplight": {
+              "id": "9w2hmstgpej0u"
+            }
+          },
+          "name": {
+            "type": "string",
+            "x-stoplight": {
+              "id": "r2qlvgqli8102"
+            }
+          }
+        },
+        "x-stoplight": {
+          "id": "vhk0okdjbslr0"
+        },
+        "x-internal": true
+      },
+      "UniquenessValidationResponse": {
+        "title": "UniquenessValidationResponse",
+        "type": "object",
+        "properties": {
+          "object": {
+            "$ref": "#/components/schemas/UniquenessValidationRequest"
+          },
+          "validationStatus": {
+            "type": "string",
+            "x-stoplight": {
+              "id": "3fy82akuskye9"
+            },
+            "enum": [
+              "EXISTS",
+              "NOT_EXISTS",
+              "VALIDATION_FAILURE"
+            ]
+          }
+        },
+        "x-stoplight": {
+          "id": "2x3f5tahyq8nx"
+        },
+        "x-internal": true
+      },
+      "MigratedCommonAccessPolicy": {
+        "title": "MigratedCommonAccessPolicy",
+        "required": [
+          "name",
+          "policyEntitlement",
+          "policyId"
+        ],
+        "type": "object",
+        "properties": {
+          "policyId": {
+            "maxLength": 99,
+            "type": "string",
+            "example": "fg55dvba-4d5f-5712-8fda-da03cedvab10",
+            "x-stoplight": {
+              "id": "a8p38o7bpnkr1"
+            }
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string",
+            "example": "Access Policy for Cosmos DB",
+            "x-stoplight": {
+              "id": "vgh90ujt8f87z"
+            }
+          },
+          "description": {
+            "maxLength": 200,
+            "type": "string",
+            "x-stoplight": {
+              "id": "r3oohyvkwjvn1"
+            }
+          },
+          "policyEntitlement": {
+            "$ref": "#/components/schemas/PolicyEntitlement"
+          },
+          "expirationTime": {
+            "type": "string",
+            "description": "The date the policy expires\n",
+            "format": "date-time",
+            "x-stoplight": {
+              "id": "s8sc86m8pabbc"
+            }
+          }
+        },
+        "x-stoplight": {
+          "id": "shsznefjhnpid"
+        },
+        "x-internal": true
+      },
+      "MigrationResponse": {
+        "title": "MigrationResponse",
+        "required": [
+          "policyId",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "policyId": {
+            "type": "string",
+            "x-stoplight": {
+              "id": "w4ogo2xl21yws"
+            }
+          },
+          "status": {
+            "$ref": "#/components/schemas/ActionStatus"
+          }
+        },
+        "x-stoplight": {
+          "id": "8g5do39aeufas"
+        },
+        "x-internal": true
+      },
+      "InfrastructureDatabaseAuthenticationMethod": {
+        "title": "InfrastructureDatabaseAuthenticationMethod",
+        "type": "string",
+        "x-stoplight": {
+          "id": "sreu4qrryt8ln"
+        },
+        "enum": [
+          "ldap_auth",
+          "db_auth",
+          "oracle_auth",
+          "mongo_auth",
+          "sqlserver_auth",
+          "rds_iam_user_auth"
+        ]
+      },
+      "InfrastructureDatabaseInstanceTarget": {
+        "title": "InfrastructureDatabaseInstanceTarget",
+        "required": [
+          "authenticationMethod",
+          "instanceId",
+          "instanceName",
+          "instanceType",
+          "profile"
+        ],
+        "type": "object",
+        "properties": {
+          "instanceName": {
+            "title": "Instancename",
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string",
+            "description": "The name of the database instance"
+          },
+          "instanceType": {
+            "title": "Instancetype",
+            "maxLength": 32,
+            "minLength": 1,
+            "type": "string",
+            "description": "The database type of the database instance"
+          },
+          "instanceId": {
+            "title": "Instanceid",
+            "maxLength": 36,
+            "minLength": 1,
+            "type": "string",
+            "description": "The id of the database instance"
+          },
+          "profile": {
+            "title": "Profile",
+            "description": "The profile to be used for this database instance",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/InfrastructureDatabaseLDAPAuthProfile"
+              },
+              {
+                "$ref": "#/components/schemas/InfrastructureDatabaseLocalDBAuthProfile"
+              },
+              {
+                "$ref": "#/components/schemas/InfrastructureDatabaseOracleDBAuthProfile"
+              },
+              {
+                "$ref": "#/components/schemas/InfrastructureDatabaseMongoAuthProfile"
+              },
+              {
+                "$ref": "#/components/schemas/InfrastructureDatabaseSqlServerAuthProfile"
+              },
+              {
+                "$ref": "#/components/schemas/InfrastructureDatabaseRDSIAMUserAuthProfile"
+              }
+            ]
+          },
+          "authenticationMethod": {
+            "$ref": "#/components/schemas/InfrastructureDatabaseAuthenticationMethod"
+          }
+        },
+        "x-stoplight": {
+          "id": "f45yqf973zh8v"
+        }
+      },
+      "InfrastructureDatabaseLDAPAuthProfile": {
+        "title": "InfrastructureDatabaseLDAPAuthProfile",
+        "required": [
+          "assignGroups"
+        ],
+        "type": "object",
+        "properties": {
+          "assignGroups": {
+            "title": "Assigngroups",
+            "maxItems": 50,
+            "uniqueItems": true,
+            "type": "array",
+            "description": "The list of LDAP groups to assign to the user",
+            "items": {
+              "maxLength": 50,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        },
+        "description": "The set of permissions that the policy members recieve upon using this profile",
+        "x-examples": {
+          "Example 1": {
+            "assignGroups": [
+              "hr",
+              "it"
+            ]
+          }
+        },
+        "x-stoplight": {
+          "id": "tc3tl0pzttsax"
+        }
+      },
+      "InfrastructureDatabaseLocalDBAuthProfile": {
+        "title": "InfrastructureDatabaseLocalDBAuthProfile",
+        "required": [
+          "roles"
+        ],
+        "type": "object",
+        "properties": {
+          "roles": {
+            "title": "Roles",
+            "maxItems": 50,
+            "uniqueItems": true,
+            "type": "array",
+            "description": "The list of roles to assign to the user",
+            "items": {
+              "maxLength": 50,
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        },
+        "description": "The set of permissions that the policy members recieve upon using this profile",
+        "x-examples": {
+          "Example 1": {
+            "roles": [
+              "developers",
+              "administrators"
+            ]
+          }
+        },
+        "x-stoplight": {
+          "id": "8mtwniy840026"
+        }
+      },
+      "InfrastructureDatabaseMongoAuthProfile": {
+        "title": "InfrastructureDatabaseMongoAuthProfile",
+        "required": [
+          "databaseBuiltinRoles",
+          "databaseCustomRoles",
+          "globalBuiltinRoles"
+        ],
+        "type": "object",
+        "properties": {
+          "globalBuiltinRoles": {
+            "title": "Globalbuiltinroles",
+            "maxItems": 50,
+            "uniqueItems": true,
+            "type": "array",
+            "description": "The list of global builtin roles to assign to the user",
+            "items": {
+              "$ref": "#/components/schemas/InfrastructureDatabaseMongoGlobalBuiltinRole"
+            }
+          },
+          "databaseBuiltinRoles": {
+            "title": "Databasebuiltinroles",
+            "maxProperties": 1000,
+            "type": "object",
+            "additionalProperties": {
+              "maxItems": 50,
+              "uniqueItems": true,
+              "type": "array",
+              "description": "The list of database specific builtin roles to assign to the user upon connecting the specified database",
+              "items": {
+                "$ref": "#/components/schemas/InfrastructureDatabaseMongoDatabaseBuiltinRole"
+              }
+            }
+          },
+          "databaseCustomRoles": {
+            "title": "Databasecustomroles",
+            "maxProperties": 1000,
+            "type": "object",
+            "additionalProperties": {
+              "maxItems": 50,
+              "uniqueItems": true,
+              "type": "array",
+              "description": "The list of database specific custom roles to assign to the user upon connecting the specified database",
+              "items": {
+                "maxLength": 50,
+                "minLength": 1,
+                "type": "string"
+              }
+            }
+          }
+        },
+        "description": "The set of permissions that the policy members recieve upon using this profile",
+        "x-examples": {
+          "Example 1": {
+            "globalBuiltinRoles": [
+              "root"
+            ],
+            "databaseBuiltinRoles": {
+              "database1": [
+                "userAdmin"
+              ],
+              "database2": [
+                "userAdmin"
+              ]
+            },
+            "databaseCustomRoles": {
+              "database1": [
+                "developers"
+              ],
+              "database3": [
+                "administrators"
+              ]
+            }
+          }
+        },
+        "x-stoplight": {
+          "id": "yjtmok9ti7pen"
+        }
+      },
+      "InfrastructureDatabaseOracleDBAuthProfile": {
+        "title": "InfrastructureDatabaseOracleDBAuthProfile",
+        "required": [
+          "dbaRole",
+          "roles",
+          "sysdbaRole",
+          "sysoperRole"
+        ],
+        "type": "object",
+        "properties": {
+          "roles": {
+            "title": "Roles",
+            "maxItems": 50,
+            "uniqueItems": true,
+            "type": "array",
+            "description": "The list of roles to assign to the user",
+            "items": {
+              "maxLength": 50,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "dbaRole": {
+            "title": "InfrastructureDatabasearole",
+            "type": "boolean",
+            "description": "Whether to assign the DBA role to the user"
+          },
+          "sysdbaRole": {
+            "title": "Sysdbarole",
+            "type": "boolean",
+            "description": "Whether to assign the SYSDBA role to the user"
+          },
+          "sysoperRole": {
+            "title": "Sysoperrole",
+            "type": "boolean",
+            "description": "Whether to assign the SYSOPER role to the user"
+          }
+        },
+        "description": "The set of permissions that the policy members recieve upon using this profile",
+        "x-examples": {
+          "Example 1": {
+            "roles": [
+              "administration"
+            ],
+            "dbaRole": true,
+            "sysdbaRole": true,
+            "sysoperRole": true
+          }
+        },
+        "x-stoplight": {
+          "id": "tst2ezs0rs6xw"
+        }
+      },
+      "InfrastructureDatabaseRDSIAMUserAuthProfile": {
+        "title": "InfrastructureDatabaseRDSIAMUserAuthProfile",
+        "required": [
+          "dbUser"
+        ],
+        "type": "object",
+        "properties": {
+          "dbUser": {
+            "title": "Database IAM User",
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string",
+            "description": "The IAM user to use for connecting to the database"
+          }
+        },
+        "description": "The set of permissions that the policy members recieve upon using this profile",
+        "x-examples": {
+          "Example 1": {
+            "dbUser": "readonly_user"
+          }
+        },
+        "x-stoplight": {
+          "id": "13imldktv5k2f"
+        }
+      },
+      "InfrastructureDatabaseSqlServerAuthProfile": {
+        "title": "InfrastructureDatabaseSqlServerAuthProfile",
+        "required": [
+          "databaseBuiltinRoles",
+          "databaseCustomRoles",
+          "globalBuiltinRoles",
+          "globalCustomRoles"
+        ],
+        "type": "object",
+        "properties": {
+          "globalBuiltinRoles": {
+            "title": "Globalbuiltinroles",
+            "uniqueItems": true,
+            "type": "array",
+            "description": "The list of global builtin roles to assign to the user",
+            "items": {
+              "$ref": "#/components/schemas/InfrastructureDatabaseSqlServerGlobalBuiltinRole"
+            }
+          },
+          "globalCustomRoles": {
+            "title": "Globalcustomroles",
+            "maxItems": 50,
+            "uniqueItems": true,
+            "type": "array",
+            "description": "The list of global custom roles to assign to the user",
+            "items": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "databaseBuiltinRoles": {
+            "title": "Databasebuiltinroles",
+            "maxProperties": 1000,
+            "type": "object",
+            "additionalProperties": {
+              "uniqueItems": true,
+              "type": "array",
+              "description": "The list of database specific builtin roles to assign to the user upon connecting the specified database",
+              "items": {
+                "$ref": "#/components/schemas/InfrastructureDatabaseSqlServerDatabaseBuiltinRole"
+              }
+            }
+          },
+          "databaseCustomRoles": {
+            "title": "Databasecustomroles",
+            "maxProperties": 1000,
+            "type": "object",
+            "additionalProperties": {
+              "maxItems": 50,
+              "uniqueItems": true,
+              "type": "array",
+              "description": "The list of per database specific custom roles to assign to the user upon connecting the specified database",
+              "items": {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              }
+            }
+          }
+        },
+        "description": "The set of permissions that the policy members recieve upon using this profile",
+        "x-examples": {
+          "Example 1": {
+            "accountBuiltinRoles": [
+              "ORGADMIN"
+            ],
+            "accountCustomRoles": [
+              "it"
+            ],
+            "databaseCustomRoles": [
+              "qa"
+            ]
+          }
+        },
+        "x-stoplight": {
+          "id": "z9ae046p9us2w"
+        }
+      },
+      "InfrastructureDatabaseMongoDatabaseBuiltinRole": {
+        "title": "InfrastructureDatabaseMongoDatabaseBuiltinRole",
+        "type": "string",
+        "description": "",
+        "x-examples": {
+          "Example 1": "userAdmin"
+        },
+        "x-stoplight": {
+          "id": "9a1unmfaqg87w"
+        },
+        "enum": [
+          "userAdmin",
+          "dbOwner",
+          "dbAdmin",
+          "readWrite",
+          "read"
+        ]
+      },
+      "InfrastructureDatabaseMongoGlobalBuiltinRole": {
+        "title": "InfrastructureDatabaseMongoGlobalBuiltinRole",
+        "type": "string",
+        "x-stoplight": {
+          "id": "b2r0cpmhtvvqv"
+        },
+        "enum": [
+          "root",
+          "dbAdminAnyDatabase",
+          "userAdminAnyDatabase",
+          "readWriteAnyDatabase",
+          "readAnyDatabase",
+          "backup",
+          "restore",
+          "clusterAdmin",
+          "clusterManager",
+          "clusterMonitor",
+          "hostManager"
+        ]
+      },
+      "InfrastructureDatabaseSqlServerDatabaseBuiltinRole": {
+        "title": "InfrastructureDatabaseSqlServerDatabaseBuiltinRole",
+        "type": "string",
+        "description": "The authentication method used for a specific target",
+        "x-stoplight": {
+          "id": "jt8rbraqxe9so"
+        },
+        "enum": [
+          "db_owner",
+          "db_securityadmin",
+          "db_accessadmin",
+          "db_backupoperator",
+          "db_ddladmin",
+          "db_datawriter",
+          "db_datareader",
+          "db_denydatawriter",
+          "db_denydatareader"
+        ]
+      },
+      "InfrastructureDatabaseSqlServerGlobalBuiltinRole": {
+        "title": "SqlServerDatabaseBuiltinRole",
+        "type": "string",
+        "x-stoplight": {
+          "id": "5bn4oxqisfqtx"
+        },
+        "enum": [
+          "db_owner",
+          "db_securityadmin",
+          "db_accessadmin",
+          "db_backupoperator",
+          "db_ddladmin",
+          "db_datawriter",
+          "db_datareader",
+          "db_denydatawriter",
+          "db_denydatareader"
+        ]
+      },
+      "InfrastructureDatabaseTargets": {
+        "title": "InfrastructureDatabaseTargets",
+        "required": [
+          "FQDN/IP"
+        ],
+        "type": "object",
+        "properties": {
+          "FQDN/IP": {
+            "$ref": "#/components/schemas/InfrastructureDatabaseTargets_FQDNIP"
+          }
+        },
+        "description": "The targets this policy will enable the policy members to connect to",
+        "x-stoplight": {
+          "id": "8j48omq934wcr"
+        }
+      },
+      "InfrastructureDatabaseAccessPolicy": {
+        "title": "InfrastructureDatabaseAccessPolicy",
+        "type": "object",
+        "description": "Infrastructure access policy details",
+        "x-stoplight": {
+          "id": "dazyw6xuxjae4"
+        },
+        "x-examples": {
+          "Example 1": {
+            "metadata": {
+              "name": "All Databases Policy",
+              "description": "Policy with example of all supported databases and authentication methods",
+              "policyTags": [
+                "All_Databases",
+                "MySQL",
+                "MariaDB",
+                "PostgreSQL",
+                "SQL Server",
+                "Oracle",
+                "Db2",
+                "MongoDB"
+              ],
+              "timeZone": "Asia/Jerusalem",
+              "policyEntitlement": {
+                "targetCategory": "DB",
+                "locationType": "FQDN/IP",
+                "policyType": "Recurring"
+              },
+              "timeFrame": {
+                "fromTime": 0,
+                "toTime": 0
+              },
+              "status": {
+                "status": "Active",
+                "statusCode": "200",
+                "statusDescription": "All good"
+              }
+            },
+            "principals": [
+              {
+                "id": "7fad78d3-42e2-46e1-a252-4a8168e94fcf",
+                "name": "AutomationGroupOnly",
+                "type": "Group",
+                "sourceDirectoryName": "Microsoft Entra ID cybrsca",
+                "sourceDirectoryId": "170c098a-8535-6b76-a7ac-1a0df72f3313"
+              },
+              {
+                "id": "0287de75-ef38-44f1-a008-b9aa3721055f",
+                "name": "tina@cyberark.cloud.27901",
+                "type": "User",
+                "sourceDirectoryName": "CyberArk Cloud Directory",
+                "sourceDirectoryId": "09B9A9B0-6CE8-465F-AB03-65766D33B05E"
+              },
+              {
+                "id": "cc1f755c-56d0-46bb-9a58-fbe455e78ccb",
+                "name": "robert@cyberark.cloud.27901",
+                "type": "User",
+                "sourceDirectoryName": "CyberArk Cloud Directory",
+                "sourceDirectoryId": "09B9A9B0-6CE8-465F-AB03-65766D33B05E"
+              },
+              {
+                "id": "c2c7bcc6-9560-44e0-8dff-5be221cd37ee",
+                "name": "david@cyberark.cloud.27901",
+                "type": "User",
+                "sourceDirectoryName": "CyberArk Cloud Directory",
+                "sourceDirectoryId": "09B9A9B0-6CE8-465F-AB03-65766D33B05E"
+              },
+              {
+                "id": "bec88b33_304b_424f_852e_29fa1332f8f7",
+                "name": "Administration Role",
+                "type": "Role",
+                "sourceDirectoryName": "Identity",
+                "sourceDirectoryId": "Identity"
+              }
+            ],
+            "conditions": {
+              "accessWindow": {
+                "daysOfTheWeek": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6
+                ],
+                "fromHour": 0,
+                "toHour": 0
+              },
+              "maxSessionDuration": 2,
+              "idleTime": 10
+            },
+            "targets": {
+              "FQDN/IP": {
+                "instances": [
+                  {
+                    "instanceName": "My-IAM-MySQL",
+                    "instanceId": "197011",
+                    "instanceType": "MySQL",
+                    "authenticationMethod": "rds_iam_user_auth",
+                    "profile": {
+                      "dbUser": "iam_user"
+                    }
+                  },
+                  {
+                    "instanceName": "My-Local-MySQL",
+                    "instanceId": "197012",
+                    "instanceType": "MySQL",
+                    "authenticationMethod": "db_auth",
+                    "profile": {
+                      "roles": [
+                        "hr",
+                        "MySQL_role"
+                      ]
+                    }
+                  },
+                  {
+                    "instanceName": "My-Local-MariaDB",
+                    "instanceId": "197014",
+                    "instanceType": "MariaDB",
+                    "authenticationMethod": "db_auth",
+                    "profile": {
+                      "roles": [
+                        "hr",
+                        "MariaDB_role"
+                      ]
+                    }
+                  },
+                  {
+                    "instanceName": "My-IAM-MariaDB",
+                    "instanceId": "197013",
+                    "instanceType": "MariaDB",
+                    "authenticationMethod": "rds_iam_user_auth",
+                    "profile": {
+                      "dbUser": "root"
+                    }
+                  },
+                  {
+                    "instanceName": "My-IAM-PostgreSQL",
+                    "instanceId": "197015",
+                    "instanceType": "Postgres",
+                    "authenticationMethod": "rds_iam_user_auth",
+                    "profile": {
+                      "dbUser": "postgres"
+                    }
+                  },
+                  {
+                    "instanceName": "My-Local-PostgreSQL",
+                    "instanceId": "197016",
+                    "instanceType": "Postgres",
+                    "authenticationMethod": "db_auth",
+                    "profile": {
+                      "roles": [
+                        "hr",
+                        "PostgreSQL_role"
+                      ]
+                    }
+                  },
+                  {
+                    "instanceName": "my-oracle-db",
+                    "instanceId": "196946",
+                    "instanceType": "Oracle",
+                    "authenticationMethod": "oracle_auth",
+                    "profile": {
+                      "roles": [
+                        "Oracle_custom_role"
+                      ],
+                      "dbaRole": true,
+                      "sysdbaRole": true,
+                      "sysoperRole": true
+                    }
+                  },
+                  {
+                    "instanceName": "My-Local-MongoDB",
+                    "instanceId": "197018",
+                    "instanceType": "Mongo",
+                    "authenticationMethod": "mongo_auth",
+                    "profile": {
+                      "globalBuiltinRoles": [
+                        "root",
+                        "dbAdminAnyDatabase",
+                        "userAdminAnyDatabase",
+                        "readWriteAnyDatabase",
+                        "readAnyDatabase",
+                        "backup",
+                        "restore",
+                        "clusterAdmin",
+                        "clusterManager",
+                        "clusterMonitor",
+                        "hostManager"
+                      ],
+                      "globalCustomRoles": [],
+                      "databaseBuiltinRoles": {
+                        "Employees_DB": [
+                          "userAdmin",
+                          "dbOwner",
+                          "dbAdmin",
+                          "readWrite",
+                          "read"
+                        ]
+                      },
+                      "databaseCustomRoles": {
+                        "Employees_DB": [
+                          "MongoDB_custom_db_role",
+                          "MongoDB_custom_db_role_2"
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "instanceName": "My-AD-Db2",
+                    "instanceId": "197019",
+                    "instanceType": "DB2",
+                    "authenticationMethod": "ldap_auth",
+                    "profile": {
+                      "assignGroups": [
+                        "AD_Emploees_Group",
+                        "AD_Emploees_Group_2"
+                      ]
+                    }
+                  },
+                  {
+                    "instanceName": "MSSQL-local",
+                    "instanceId": "196914",
+                    "instanceType": "MSSQL",
+                    "authenticationMethod": "sqlserver_auth",
+                    "profile": {
+                      "globalBuiltinRoles": [
+                        "sysadmin",
+                        "serveradmin",
+                        "securityadmin",
+                        "processadmin",
+                        "setupadmin",
+                        "bulkadmin",
+                        "diskadmin",
+                        "dbcreator"
+                      ],
+                      "globalCustomRoles": [
+                        "SQL_Server_instance_custom_role_1",
+                        "SQL_Server_instance_custom_role_2"
+                      ],
+                      "databaseBuiltinRoles": {
+                        "SQL_Server_Employees_DB_1": [
+                          "db_owner",
+                          "db_securityadmin",
+                          "db_accessadmin",
+                          "db_backupoperator",
+                          "db_ddladmin",
+                          "db_datawriter",
+                          "db_datareader",
+                          "db_denydatawriter",
+                          "db_denydatareader"
+                        ],
+                        "SQL_Server_Employees_DB_2": [
+                          "db_owner",
+                          "db_securityadmin",
+                          "db_accessadmin",
+                          "db_backupoperator",
+                          "db_ddladmin",
+                          "db_datawriter",
+                          "db_datareader",
+                          "db_denydatawriter",
+                          "db_denydatareader"
+                        ]
+                      },
+                      "databaseCustomRoles": {
+                        "SQL_Server_Employees_DB_1": [
+                          "SQL_Server_database_custom_role_1",
+                          "SQL_Server_database_custom_role_2"
+                        ],
+                        "SQL_Server_Employees_DB_2": [
+                          "SQL_Server_database_custom_role_1",
+                          "SQL_Server_database_custom_role_2"
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "instanceName": "SQL Server",
+                    "instanceId": "196813",
+                    "instanceType": "MSSQL",
+                    "authenticationMethod": "ldap_auth",
+                    "profile": {
+                      "assignGroups": [
+                        "SQL_Server_AD_group",
+                        "SQL_Server_AD_group_2"
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/InfrastructureCommonAccessPolicy"
+          },
+          {
+            "required": [
+              "targets"
+            ],
+            "properties": {
+              "targets": {
+                "$ref": "#/components/schemas/InfrastructureDatabaseTargets"
+              }
+            },
+            "x-stoplight": {
+              "id": "fdmxn16afxvup"
+            }
+          }
+        ]
+      },
+      "CloudInvalidWorkspace": {
+        "title": "CloudInvalidWorkspace",
+        "required": [
+          "id",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "x-stoplight": {
+              "id": "yuef9n8fkdq8b"
+            }
+          },
+          "status": {
+            "type": "string",
+            "description": "The status of the workspace",
+            "x-stoplight": {
+              "id": "cmyha0cv131ak"
+            },
+            "enum": [
+              "DELETED",
+              "SUSPENDED"
+            ]
+          }
+        },
+        "description": "The invalid targets in the policy",
+        "x-stoplight": {
+          "id": "j84xxlv55ddf7"
+        }
+      },
+      "CloudInvalidRole": {
+        "title": "CloudInvalidRole",
+        "required": [
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "arn:aws:iam::148738667800:role/FullAccessToDevelopers",
+            "x-stoplight": {
+              "id": "uimo5p34m11sp"
+            }
+          }
+        },
+        "description": "The invalid roles in the policy",
+        "x-stoplight": {
+          "id": "9qbukqhnxneca"
+        }
+      },
+      "CloudInvalidResources": {
+        "title": "CloudInvalidResources",
+        "type": "object",
+        "properties": {
+          "workspaces": {
+            "type": "array",
+            "x-stoplight": {
+              "id": "aa9b69vshov06"
+            },
+            "items": {
+              "$ref": "#/components/schemas/CloudInvalidWorkspace"
+            }
+          },
+          "roles": {
+            "type": "array",
+            "x-stoplight": {
+              "id": "2j67nsjs8f27y"
+            },
+            "items": {
+              "$ref": "#/components/schemas/CloudInvalidRole"
+            }
+          }
+        },
+        "description": "Indicates the invalid resources that lead to an Error status in the policy.",
+        "x-stoplight": {
+          "id": "geoh8hejf8eyp"
+        },
+        "x-internal": false
+      },
+      "inline_response_200": {
+        "required": [
+          "nextToken",
+          "results",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "x-stoplight": {
+              "id": "4gznmmpwm6vt6"
+            },
+            "items": {
+              "type": "object"
+            }
+          },
+          "nextToken": {
+            "type": "string",
+            "description": "The token from the previous API response.<br>To retrieve the next N results, use  DS1_10;DS2_20.<br>This means that the service will retrieve 10 results from DS_1 and 20 results from DS_2.",
+            "x-stoplight": {
+              "id": "uq6sd3tojycpm"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total number of access policies.",
+            "format": "int32",
+            "x-stoplight": {
+              "id": "2dhyh95hxutmi"
+            }
+          }
+        }
+      },
+      "inline_response_200_1": {
+        "required": [
+          "policyId"
+        ],
+        "type": "object",
+        "properties": {
+          "policyId": {
+            "maxLength": 99,
+            "type": "string",
+            "description": "The unique identifier of the access policy",
+            "example": "fg55dvba-4d5f-5712-8fda-da03cedvab10",
+            "x-stoplight": {
+              "id": "uodib5ow8rjbf"
+            }
+          }
+        }
+      },
+      "inline_response_200_2": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "x-stoplight": {
+              "id": "gxbsciamby573"
+            },
+            "enum": [
+              "VALIDATING"
+            ]
+          }
+        }
+      },
+      "inline_response_200_3": {
+        "required": [
+          "is_service_active",
+          "tenant_id"
+        ],
+        "type": "object",
+        "properties": {
+          "is_service_active": {
+            "type": "boolean",
+            "description": "Indicates whether or not the service is managed in the Administration space.\nfalse: The service is not managed in UAP\ntrue: The service is managed in UAP",
+            "x-stoplight": {
+              "id": "twhxuc8drde7p"
+            }
+          },
+          "tenant_id": {
+            "maxLength": 32,
+            "minLength": 32,
+            "pattern": "\\w+",
+            "type": "string",
+            "x-stoplight": {
+              "id": "vo86ivrldkwqc"
+            }
+          }
+        }
+      },
+      "policies_migrate_body": {
+        "required": [
+          "serviceName"
+        ],
+        "type": "object",
+        "properties": {
+          "serviceName": {
+            "type": "string",
+            "description": "The name of the service you are querying to determine if the policy is managed in the Administration space. Possible values - sca, sia",
+            "x-stoplight": {
+              "id": "8ur8zjx8xwmhn"
+            },
+            "enum": [
+              "SCA",
+              "SIA"
+            ]
+          }
+        }
+      },
+      "migrate_rollback_body": {
+        "required": [
+          "serviceName"
+        ],
+        "type": "object",
+        "properties": {
+          "serviceName": {
+            "type": "string",
+            "description": "The name of the service you are querying to determine if it is managed in UAP. Possible values - sca, sia",
+            "x-stoplight": {
+              "id": "0vw8q0a695f13"
+            },
+            "enum": [
+              "SCA",
+              "SIA"
+            ]
+          },
+          "soft": {
+            "type": "boolean",
+            "description": "Set to false if you would like the rollback to delete the synced policies. Default is true, meaning, UAP not delete the policies, it just disabled for the service.",
+            "x-stoplight": {
+              "id": "ab1o29gmn4e0a"
+            },
+            "default": true
+          }
+        }
+      },
+      "migrate_validation_body": {
+        "required": [
+          "request"
+        ],
+        "type": "object",
+        "properties": {
+          "request": {
+            "maxItems": 100,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UniquenessValidationRequest"
+            }
+          }
+        }
+      },
+      "inline_response_200_4": {
+        "required": [
+          "results"
+        ],
+        "type": "object",
+        "properties": {
+          "results": {
+            "maxItems": 100,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UniquenessValidationResponse"
+            }
+          }
+        }
+      },
+      "policies_sync_body": {
+        "required": [
+          "request"
+        ],
+        "type": "object",
+        "properties": {
+          "request": {
+            "maxItems": 100,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MigratedCommonAccessPolicy"
+            }
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "If true, performs a validation without persisting the policy\n",
+            "x-stoplight": {
+              "id": "dryrun-field-id"
+            }
+          }
+        }
+      },
+      "inline_response_200_5": {
+        "required": [
+          "results"
+        ],
+        "type": "object",
+        "properties": {
+          "results": {
+            "maxItems": 100,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MigrationResponse"
+            }
+          }
+        }
+      },
+      "CommonAccessPolicy_metadata_timeFrame": {
+        "type": "object",
+        "properties": {
+          "fromTime": {
+            "pattern": "yyyy-MM-ddTHH:mm:ss",
+            "type": "string",
+            "description": "The date the policy becomes active",
+            "format": "date-time"
+          },
+          "toTime": {
+            "pattern": "yyyy-MM-ddTHH:mm:ss",
+            "type": "string",
+            "description": "The date the policy expires",
+            "format": "date-time"
+          }
+        },
+        "description": "The timeframe that the policy is active. <br>\nFor an unlimited timeframe, leave empty."
+      },
+      "CommonAccessPolicy_metadata": {
+        "required": [
+          "name",
+          "policyEntitlement",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "policyId": {
+            "maxLength": 99,
+            "minLength": 0,
+            "type": "string",
+            "description": "The unique identifier of the access policy",
+            "format": "uuid"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string",
+            "description": "A unique name for the access policy.",
+            "example": "Access Policy for Cosmos DB"
+          },
+          "description": {
+            "maxLength": 200,
+            "type": "string",
+            "description": "A short description about the policy - maximum 200 characters"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PolicyStatus"
+          },
+          "policyTags": {
+            "maxItems": 20,
+            "type": "array",
+            "description": "Customized tags to help identify the policy and those similar to it<br>\nMaximum 20 tags per policy\n",
+            "items": {
+              "maxLength": 50,
+              "type": "string"
+            }
+          },
+          "timeFrame": {
+            "$ref": "#/components/schemas/CommonAccessPolicy_metadata_timeFrame"
+          },
+          "timeZone": {
+            "maxLength": 50,
+            "pattern": "\\w+",
+            "type": "string",
+            "description": "The time zone identifier<br>Example: (Europe/London)\nDefault: GMT",
+            "x-stoplight": {
+              "id": "qu9e4pjjpfh5l"
+            }
+          },
+          "createdBy": {
+            "$ref": "#/components/schemas/ChangeInfo"
+          },
+          "updatedBy": {
+            "$ref": "#/components/schemas/ChangeInfo"
+          },
+          "policyEntitlement": {
+            "$ref": "#/components/schemas/PolicyEntitlement"
+          }
+        }
+      },
+      "InfrastructureVirtualMachineTarget_AWS_tags": {
+        "required": [
+          "key"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "minLength": 1,
+            "type": "string",
+            "x-stoplight": {
+              "id": "8ob5ka5rj76ko"
+            }
+          },
+          "value": {
+            "type": "array",
+            "x-stoplight": {
+              "id": "79uky0y9bgwyx"
+            },
+            "items": {
+              "type": "string",
+              "x-stoplight": {
+                "id": "827oh7tw58pwp"
+              }
+            }
+          }
+        }
+      },
+      "InfrastructureVirtualMachineTarget_AWS": {
+        "type": "object",
+        "properties": {
+          "regions": {
+            "type": "array",
+            "description": "AWS region names. For example: \"us-east-1\". <br>\nTo list all regions, leave empty.",
+            "x-stoplight": {
+              "id": "p5rxbmml3kd2j"
+            },
+            "items": {
+              "type": "string",
+              "x-stoplight": {
+                "id": "2qioooao4tdq2"
+              }
+            }
+          },
+          "tags": {
+            "type": "array",
+            "description": "A list of key-value pairs that have been defined as custom tags for your  AWS instances. <br>\nTo list all tags, leave empty.",
+            "x-stoplight": {
+              "id": "f1bwaydcb9yk0"
+            },
+            "items": {
+              "$ref": "#/components/schemas/InfrastructureVirtualMachineTarget_AWS_tags"
+            }
+          },
+          "vpcIds_copy": {
+            "type": "array",
+            "description": "A list of AWS VPC IDs. The accepted syntax is \"vpc-<n>\". <br>\nTo list all VPCs, leave empty.",
+            "x-stoplight": {
+              "id": "38edh9b6npdmh"
+            },
+            "items": {
+              "type": "string",
+              "x-stoplight": {
+                "id": "7v7ulx32tfmsi"
+              }
+            }
+          },
+          "vpcIds": {
+            "type": "array",
+            "description": "A list of AWS VPC IDs. The accepted syntax is \"vpc-<n>\". <br>\nTo list all VPCs, leave empty.",
+            "x-stoplight": {
+              "id": "yh3702k191fu1"
+            },
+            "items": {
+              "type": "string",
+              "x-stoplight": {
+                "id": "pox1ko2c4fqzp"
+              }
+            }
+          },
+          "accountIds": {
+            "type": "array",
+            "description": "AWS account IDs. <br>\nTo list all AWS accounts, leave empty.",
+            "x-stoplight": {
+              "id": "ehs0qgbe57p0m"
+            },
+            "items": {
+              "type": "string",
+              "x-stoplight": {
+                "id": "2bsw2qts06ino"
+              }
+            }
+          }
+        }
+      },
+      "InfrastructureVirtualMachineTarget_Azure_tags": {
+        "required": [
+          "key"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "minLength": 1,
+            "type": "string",
+            "x-stoplight": {
+              "id": "7q4v4x3vwi3om"
+            }
+          },
+          "value": {
+            "type": "array",
+            "x-stoplight": {
+              "id": "r6ug0q51wmqm6"
+            },
+            "items": {
+              "type": "string",
+              "x-stoplight": {
+                "id": "5ejkx08g225du"
+              }
+            }
+          }
+        }
+      },
+      "InfrastructureVirtualMachineTarget_Azure": {
+        "type": "object",
+        "properties": {
+          "regions": {
+            "type": "array",
+            "description": "Azure region names. For example: eastus2. <br>\nTo list all regions, leave empty.",
+            "x-stoplight": {
+              "id": "brjiqme9096rd"
+            },
+            "items": {
+              "type": "string",
+              "x-stoplight": {
+                "id": "xhhioxycf2xxg"
+              }
+            }
+          },
+          "tags": {
+            "type": "array",
+            "description": "A list of key-value pairs that have been defined as custom tags for your Azure VMs.<br>\nTo list all tags, leave empty.",
+            "x-stoplight": {
+              "id": "28ny6biguwnan"
+            },
+            "items": {
+              "$ref": "#/components/schemas/InfrastructureVirtualMachineTarget_Azure_tags"
+            }
+          },
+          "resourceGroups": {
+            "type": "array",
+            "description": "A list of Azure resource group IDs. <br>\nTo list all Azure resource groups, leave empty.",
+            "x-stoplight": {
+              "id": "kjdlbdhp61xu9"
+            },
+            "items": {
+              "type": "string",
+              "x-stoplight": {
+                "id": "6ruxr3o10cxxi"
+              }
+            }
+          },
+          "vnetIds": {
+            "type": "array",
+            "description": "A list of Azure VNet IDs. <br>\nTo list all Azure VNet IDs, leave empty.",
+            "x-stoplight": {
+              "id": "z3cn8owj91g6j"
+            },
+            "items": {
+              "type": "string",
+              "x-stoplight": {
+                "id": "jz0w7c0ufa6vr"
+              }
+            }
+          },
+          "subscriptions": {
+            "type": "array",
+            "description": "Azure subscription IDs. <br>\nTo list all Azure subscriptions, leave empty.",
+            "x-stoplight": {
+              "id": "2v9toqa0zeirf"
+            },
+            "items": {
+              "type": "string",
+              "x-stoplight": {
+                "id": "0otj6ffuocd56"
+              }
+            }
+          }
+        }
+      },
+      "InfrastructureVirtualMachineTarget_GCP_labels": {
+        "required": [
+          "key"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "minLength": 1,
+            "type": "string",
+            "x-stoplight": {
+              "id": "yfxaw2sxz5rdy"
+            }
+          },
+          "value": {
+            "type": "array",
+            "x-stoplight": {
+              "id": "5lzfy93aepfep"
+            },
+            "items": {
+              "type": "string",
+              "x-stoplight": {
+                "id": "heeinfgygpwsb"
+              }
+            }
+          }
+        }
+      },
+      "InfrastructureVirtualMachineTarget_GCP": {
+        "type": "object",
+        "properties": {
+          "labels": {
+            "type": "array",
+            "description": "A list of key-value pairs that have been defined as custom labels for your GCP VMs.<br>\nTo list all labels, leave empty.",
+            "x-stoplight": {
+              "id": "9739tjp408ol7"
+            },
+            "items": {
+              "$ref": "#/components/schemas/InfrastructureVirtualMachineTarget_GCP_labels"
+            }
+          },
+          "regions": {
+            "type": "array",
+            "description": "A list of GCP region names. For example: us-east1. <br>\nTo list all regions, leave empty.",
+            "x-stoplight": {
+              "id": "m9fighbn7cmao"
+            },
+            "items": {
+              "type": "string",
+              "x-stoplight": {
+                "id": "1ik68jj4j7qg5"
+              }
+            }
+          },
+          "vpcIds": {
+            "type": "array",
+            "description": "A list of GCP VPC IDs.<br>\nAccepted syntax: \"projects/{project_id}/global/networks/{network_name}\". <br>\nTo list all VPCs, leave empty.",
+            "x-stoplight": {
+              "id": "44e6tg5yo9npr"
+            },
+            "items": {
+              "type": "string",
+              "x-stoplight": {
+                "id": "nvwvgf7ajh7mh"
+              }
+            }
+          },
+          "projects": {
+            "type": "array",
+            "description": "A list of GCP project IDs.<br>\nTo list all projects, leave empty.",
+            "x-stoplight": {
+              "id": "iktl0t68is7lf"
+            },
+            "items": {
+              "type": "string",
+              "x-stoplight": {
+                "id": "udgzqkyehjd06"
+              }
+            }
+          }
+        }
+      },
+      "InfrastructureVirtualMachineTarget_FQDNIP_fqdnRules": {
+        "required": [
+          "computernamePattern",
+          "operator"
+        ],
+        "type": "object",
+        "properties": {
+          "operator": {
+            "type": "string",
+            "x-stoplight": {
+              "id": "3cedxyhzrvqsv"
+            },
+            "enum": [
+              "WILDCARD",
+              "EXACTLY",
+              "CONTAINS",
+              "PREFIX",
+              "SUFFIX"
+            ]
+          },
+          "computernamePattern": {
+            "maxLength": 300,
+            "type": "string",
+            "description": "The pattern in relation to the operator.",
+            "x-stoplight": {
+              "id": "s625k1v0gpsoo"
+            }
+          },
+          "domain": {
+            "maxLength": 1000,
+            "type": "string",
+            "description": "The domain in which to execute the operator on the pattern.",
+            "x-stoplight": {
+              "id": "i5ldeplx4dtog"
+            }
+          }
+        }
+      },
+      "InfrastructureVirtualMachineTarget_FQDNIP_ipRules": {
+        "required": [
+          "ipAddresses",
+          "logicalName",
+          "operator"
+        ],
+        "type": "object",
+        "properties": {
+          "ipAddresses": {
+            "type": "array",
+            "description": "The IP address that matches the logical network name.",
+            "x-stoplight": {
+              "id": "9n0dkxkhbeopw"
+            },
+            "items": {
+              "maxLength": 1000,
+              "type": "string",
+              "x-stoplight": {
+                "id": "7i9131yd1hrrf"
+              }
+            }
+          },
+          "logicalName": {
+            "maxLength": 50,
+            "minLength": 2,
+            "type": "string",
+            "description": "The logical network name that matches the IP address.",
+            "x-stoplight": {
+              "id": "n64f7d5rep4ak"
+            }
+          },
+          "operator": {
+            "type": "string",
+            "x-stoplight": {
+              "id": "fnvq6fe36cie7"
+            },
+            "enum": [
+              "EXACTLY",
+              "WILDCARD"
+            ]
+          }
+        }
+      },
+      "InfrastructureVirtualMachineTarget_FQDNIP": {
+        "type": "object",
+        "properties": {
+          "fqdnRules": {
+            "type": "array",
+            "description": "A list of FQDN rules applied to the connection.",
+            "x-stoplight": {
+              "id": "ujt516hjlia3a"
+            },
+            "items": {
+              "$ref": "#/components/schemas/InfrastructureVirtualMachineTarget_FQDNIP_fqdnRules"
+            }
+          },
+          "ipRules": {
+            "type": "array",
+            "x-stoplight": {
+              "id": "o1f29up11dhb4"
+            },
+            "items": {
+              "$ref": "#/components/schemas/InfrastructureVirtualMachineTarget_FQDNIP_ipRules"
+            }
+          }
+        }
+      },
+      "InfrastructureVirtualMachineBehavior_connectAs_ssh": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "The local target user or a personal user template",
+            "x-stoplight": {
+              "id": "axb42zc5ys034"
+            }
+          }
+        },
+        "description": "A standalone local user"
+      },
+      "InfrastructureVirtualMachineBehavior_connectAs_rdp_localEphemeralUser": {
+        "type": "object",
+        "properties": {
+          "assignGroups": {
+            "type": "array",
+            "description": "A list of groups that the local user is assigned to",
+            "x-stoplight": {
+              "id": "5vu0dtqlqtbta"
+            },
+            "items": {
+              "type": "string",
+              "x-stoplight": {
+                "id": "wrq3fwe4mb6z8"
+              }
+            }
+          },
+          "enableEphemeralUserReconnect": {
+            "type": "boolean",
+            "description": "Determines whether or not the ephemeral user can reconnect",
+            "x-stoplight": {
+              "id": "dzzxlyvtimohy"
+            },
+            "default": false
+          }
+        },
+        "description": "A local ephemeral user"
+      },
+      "InfrastructureVirtualMachineBehavior_connectAs_rdp": {
+        "type": "object",
+        "properties": {
+          "localEphemeralUser": {
+            "$ref": "#/components/schemas/InfrastructureVirtualMachineBehavior_connectAs_rdp_localEphemeralUser"
+          }
+        },
+        "description": "A local user who is assigned to one or more groups"
+      },
+      "InfrastructureVirtualMachineBehavior_connectAs": {
+        "type": "object",
+        "properties": {
+          "ssh": {
+            "$ref": "#/components/schemas/InfrastructureVirtualMachineBehavior_connectAs_ssh"
+          },
+          "rdp": {
+            "$ref": "#/components/schemas/InfrastructureVirtualMachineBehavior_connectAs_rdp"
+          }
+        },
+        "description": "The profile that the policy members assume in order to connect to the target for each platform."
+      },
+      "InfrastructureDatabaseTargets_FQDNIP": {
+        "type": "object",
+        "properties": {
+          "instances": {
+            "maxItems": 1000,
+            "minItems": 1,
+            "type": "array",
+            "description": "The Database instances of the policy, a policy can have at most 1000 of either instances or databases inside instances",
+            "x-stoplight": {
+              "id": "8jcyqramcjtyq"
+            },
+            "items": {
+              "$ref": "#/components/schemas/InfrastructureDatabaseInstanceTarget"
+            }
+          }
+        }
+      }
+    },
+    "examples": {
+      "Create_aws_iam_policy": {
+        "value": {
+          "metadata": {
+            "name": "Example - Create AWS IAM policy",
+            "description": "Example policy",
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "AWS",
+              "policyType": "Recurring"
+            },
+            "policyTags": [
+              "testiam"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "08:00:00",
+              "toHour": "09:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "targets": {
+            "targets": [
+              {
+                "roleId": "arn:aws:iam::123456789123:role/examplerole",
+                "workspaceId": "123456789123"
+              }
+            ]
+          },
+          "principals": [
+            {
+              "id": "c2c7bcc6-9560-44e0-8dff-5be221cd37ee",
+              "name": "John@cyberark.cloud.28905",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "95B8A9B0-6DE8-465F-AB03-65766D33B05U",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted"
+        }
+      },
+      "Create_aws_idc_policy": {
+        "value": {
+          "metadata": {
+            "name": "Example - Create AWS IAM Identity Center policy",
+            "description": "Example policy",
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "AWS",
+              "policyType": "Recurring"
+            },
+            "policyTags": [
+              "testidc"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "08:00:00",
+              "toHour": "09:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "targets": {
+            "targets": [
+              {
+                "roleId": "arn:aws:sso:::permissionSet/ssoins-55555cf0998b940/ps-48b59e1afd27e74e",
+                "workspaceId": "123451234000",
+                "orgId": "1234567891234"
+              },
+              {
+                "roleId": "arn:aws:sso:::permissionSet/ssoins-66666cf0998b940/ps-511c1a3285b339c7",
+                "workspaceId": "123451234000",
+                "orgId": "1234567891234"
+              }
+            ]
+          },
+          "principals": [
+            {
+              "id": "c2c7bcc6-1234-44e0-8dff-5be222cd37ee",
+              "name": "John@cyberark.cloud.1234",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "08B9A9B0-8CE8-123F-CD03-12345D33B05H",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted"
+        }
+      },
+      "Create_gcp_policy_org_level": {
+        "value": {
+          "metadata": {
+            "name": "Example - Create Google Cloud policy",
+            "description": "Example policy",
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "GCP",
+              "policyType": "Recurring"
+            },
+            "policyTags": [
+              "testgcp"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "08:00:00",
+              "toHour": "09:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "targets": {
+            "targets": [
+              {
+                "roleId": "roles/accessapproval.examplerole",
+                "workspaceId": "123456789123",
+                "orgId": "123456789123",
+                "workspaceType": "gcp_organization"
+              },
+              {
+                "roleId": "roles/accessapproval.examplerole",
+                "workspaceId": "222222222222",
+                "orgId": "123456789123",
+                "workspaceType": "folder"
+              },
+              {
+                "roleId": "roles/accessapproval.examplerole",
+                "workspaceId": "444444444444",
+                "orgId": "123456789123",
+                "workspaceType": "folder"
+              },
+              {
+                "roleId": "roles/accessapproval.examplerole",
+                "workspaceId": "555555555555",
+                "orgId": "123456789123",
+                "workspaceType": "folder"
+              }
+            ]
+          },
+          "principals": [
+            {
+              "id": "c2c7bcc6-1234-11e0-8gtt-5be221cd37gg",
+              "name": "John@cyberark.cloud.20101",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "23B9A9B0-5CE8-000F-HG03-65766D33B05Y",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted"
+        }
+      },
+      "Create_gcp_policy_folder_level": {
+        "value": {
+          "metadata": {
+            "name": "Example - Create Google Cloud policy",
+            "description": "Example policy",
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "GCP",
+              "policyType": "Recurring"
+            },
+            "policyTags": [
+              "testgcp"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "08:00:00",
+              "toHour": "09:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "targets": {
+            "targets": [
+              {
+                "roleId": "roles/accessapproval.examplerole",
+                "workspaceId": "123456789123",
+                "orgId": "555555555555",
+                "workspaceType": "folder"
+              },
+              {
+                "roleId": "roles/access.examplerole",
+                "workspaceId": "project-1",
+                "orgId": "555555555555",
+                "workspaceType": "project"
+              },
+              {
+                "roleId": "roles/accessapproval.examplerole",
+                "workspaceId": "project-2",
+                "orgId": "555555555555",
+                "workspaceType": "project"
+              }
+            ]
+          },
+          "principals": [
+            {
+              "id": "c2c7bcc6-1234-99e0-8hgg-5be221cd37ff",
+              "name": "John@cyberark.cloud.20101",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "12B9A9B0-6CE8-123F-HG03-12345D33B05I",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted"
+        }
+      },
+      "Create_gcp_policy_project_level": {
+        "value": {
+          "metadata": {
+            "name": "Example - Create Google Cloud policy",
+            "description": "Example policy",
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "GCP",
+              "policyType": "Recurring"
+            },
+            "policyTags": [
+              "testgcp"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "08:00:00",
+              "toHour": "09:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "targets": {
+            "targets": [
+              {
+                "roleId": "roles/actions.Examplerole",
+                "workspaceId": "test-123456",
+                "orgId": "12345678911",
+                "workspaceType": "project"
+              },
+              {
+                "roleId": "roles/analytics.Examplerole",
+                "workspaceId": "test-123456",
+                "orgId": "12345678911",
+                "workspaceType": "project"
+              }
+            ]
+          },
+          "principals": [
+            {
+              "id": "c2c7bcc6-9560-44e0-8dff-5be221cd37ee",
+              "name": "John@cyberark.cloud.27901",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "09B9A9B0-1CE6-465F-AB09-65766D33B05G",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted"
+        }
+      },
+      "Create_azure_resource_policy": {
+        "value": {
+          "metadata": {
+            "name": "Example - Create Azure resource policy",
+            "description": "Example policy",
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "Azure",
+              "policyType": "Recurring"
+            },
+            "policyTags": [
+              "testazureresource"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "08:00:00",
+              "toHour": "09:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "targets": {
+            "targets": [
+              {
+                "roleId": "/subscriptions/19b70f3f-b121-46bd-a942-7966beb1669d/providers/Microsoft.Authorization/roleDefinitions/8d6517c1-e434-405c-9f3f-e0ae65085d76",
+                "workspaceId": "subscriptions/19b70f3f-b121-46bd-a942-7966beb1669d",
+                "orgId": "2ca55f05-abc1-12f3-9f0b-6b3f65b8d100",
+                "workspaceType": "subscription"
+              },
+              {
+                "roleId": "/subscriptions/19b70f3f-b121-46bd-a942-7966beb1669d/providers/Microsoft.Authorization/roleDefinitions/11076f67-66f6-4be0-8f6b-f0609fd05cc9",
+                "workspaceId": "subscriptions/19b70f3f-b121-46bd-a942-7966beb1669d",
+                "orgId": "2ca55f05-abc1-12f3-9f0b-6b3f65b8d100",
+                "workspaceType": "subscription"
+              }
+            ]
+          },
+          "principals": [
+            {
+              "id": "c1e2bcc4-9560-44e0-8dff-5be221cd37gg",
+              "name": "John@cyberark.cloud.27901",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "79B9A9B0-6CE8-123F-AB03-65766D33B05D",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted"
+        }
+      },
+      "Create_azure_managementgroup_policy": {
+        "value": {
+          "metadata": {
+            "name": "Example - Create Azure resource policy for management group",
+            "description": "Example policy",
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "Azure",
+              "policyType": "Recurring"
+            },
+            "policyTags": [
+              "testazure"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "08:00:00",
+              "toHour": "09:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "targets": {
+            "targets": [
+              {
+                "roleId": "/providers/Microsoft.Authorization/roleDefinitions/7f951dda-9ed3-0000-a5ca-43fe172d538d",
+                "workspaceId": "providers/Microsoft.Management/managementGroups/7ca66f05-abc6-50f5-9f0b-6b3f65b8d1a5",
+                "orgId": "7ca66f05-abc6-50f5-9f0b-6b3f65b8d1a5",
+                "workspaceType": "management_group"
+              }
+            ]
+          },
+          "principals": [
+            {
+              "id": "c2c7bcc6-1234-11e0-8dff-1be545cd37hh",
+              "name": "John@cyberark.cloud.27901",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "08B9A9D0-5CE8-333F-HG01-76543D33B05T",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted"
+        }
+      },
+      "Create_azure_subscription_policy": {
+        "value": {
+          "metadata": {
+            "name": "Example - Create Azure resource policy",
+            "description": "Example policy",
+            "timeFrame": {
+              "fromTime": 0,
+              "toTime": 0
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "Azure",
+              "policyType": "Recurring"
+            },
+            "policyTags": [
+              "testazureresource"
+            ]
+          },
+          "conditions": {
+            "accessWindow": {
+              "timeZone": "Asia/Calcutta",
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ]
+            },
+            "maxSessionDuration": 1
+          },
+          "targets": {
+            "targets": [
+              {
+                "roleId": "/subscriptions/19b70f3f-b121-46bd-a942-7966beb1669d/providers/Microsoft.Authorization/roleDefinitions/8d6517c1-e434-405c-9f3f-e0ae65085d76",
+                "workspaceId": "subscriptions/19b70f3f-b121-46bd-a942-7966beb1669d",
+                "orgId": "2ca55f05-abc1-12f3-9f0b-6b3f65b8d100",
+                "workspaceType": "subscription"
+              },
+              {
+                "roleId": "/subscriptions/19b70f3f-b121-46bd-a942-7966beb1669d/providers/Microsoft.Authorization/roleDefinitions/11076f67-66f6-4be0-8f6b-f0609fd05cc9",
+                "workspaceId": "subscriptions/19b70f3f-b121-46bd-a942-7966beb1669d",
+                "orgId": "2ca55f05-abc1-12f3-9f0b-6b3f65b8d100",
+                "workspaceType": "subscription"
+              }
+            ]
+          },
+          "principals": [
+            {
+              "id": "c1e2bcc4-9560-44e0-8dff-5be221cd37gg",
+              "name": "John@cyberark.cloud.27901",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "79B9A9B0-6CE8-123F-AB03-65766D33B05D",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted"
+        }
+      },
+      "Create_azure_resourcegroup_policy": {
+        "value": {
+          "metadata": {
+            "name": "Example - Create Azure resource policy for resource group",
+            "description": "Example policy",
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "Azure",
+              "policyType": "Recurring"
+            },
+            "policyTags": [
+              "testrg"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "08:00:00",
+              "toHour": "09:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "targets": {
+            "targets": [
+              {
+                "roleId": "/subscriptions/34b70f3f-r591-34bd-a166-7966beb1669u/providers/Microsoft.Authorization/roleDefinitions/r2f4ef05-c454-48eb-af81-4b1b4947fb11",
+                "workspaceId": "/subscriptions/34b70f3f-r591-34bd-a166-7966beb1669u/resourceGroups/cloud-storage-rg",
+                "orgId": "5ca77f05-sgd6-79f5-9f0b-6h3f65b8d1a5",
+                "workspaceType": "resource_group"
+              }
+            ]
+          },
+          "principals": [
+            {
+              "id": "c5c7bee6-7676-44e0-4dff-5be221cd37tt",
+              "name": "John@cyberark.cloud.27901",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "03G5A9B3-1CE2-454F-AB03-54321D33B05R",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted"
+        }
+      },
+      "Create_azure_entra_policy": {
+        "value": {
+          "metadata": {
+            "name": "Example - Create Microsoft Entra ID policy",
+            "description": "Example policy",
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "Azure",
+              "policyType": "Recurring"
+            },
+            "policyTags": [
+              "testazuread"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "08:00:00",
+              "toHour": "09:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "targets": {
+            "targets": [
+              {
+                "roleId": "9b895d92-2cd3-44c7-9d02-a6ac2d5ea5c3",
+                "workspaceId": "2ca00f05-abc6-11f5-9f0b-6b3f65b8d1b6",
+                "orgId": "2ca00f05-abc6-11f5-9f0b-6b3f65b8d1b6",
+                "workspaceType": "directory"
+              },
+              {
+                "roleId": "9b895d92-2cd3-44c7-9d02-a6ac2d5ea5c3",
+                "workspaceId": "2ca00f05-abc6-11f5-9f0b-6b3f65b8d1b6",
+                "orgId": "2ca00f05-abc6-11f5-9f0b-6b3f65b8d1b6",
+                "workspaceType": "directory"
+              }
+            ]
+          },
+          "principals": [
+            {
+              "id": "c2c7bcc6-9560-44e0-8dff-5be221cd37ee",
+              "name": "John@cyberark.cloud.12345",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "6UB9A9B0-6CE8-465F-AB03-65766D33B07Y",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted"
+        }
+      },
+      "Edit_aws_iam_policy": {
+        "value": {
+          "metadata": {
+            "policyId": "aws_d880e53b-151e-414b-8f07-9ea55888abc3",
+            "name": "Example - Edit AWS IAM policy",
+            "description": "Example policy",
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "AWS",
+              "policyType": "Recurring"
+            },
+            "policyTags": [
+              "testaws",
+              "test"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "10:00:00",
+              "toHour": "11:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "targets": {
+            "targets": [
+              {
+                "roleId": "arn:aws:iam::123456789123:role/examplerole",
+                "workspaceId": "123456789123"
+              },
+              {
+                "roleId": "arn:aws:iam::123456789123:role/examplerole1",
+                "workspaceId": "123456789123"
+              }
+            ]
+          },
+          "principals": [
+            {
+              "id": "c2c7bcc6-9560-44e0-8dff-5be221cd37ee",
+              "name": "John@cyberark.cloud.28905",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "95B8A9B0-6DE8-465F-AB03-65766D33B05U",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted"
+        }
+      },
+      "Edit_aws_idc_policy": {
+        "value": {
+          "metadata": {
+            "policyId": "aws_sso_3d4f67be-d149-4751-9197-a92007c6f340",
+            "name": "Example - Edit AWS IAM Identity Center policy",
+            "description": "Example policy",
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "AWS",
+              "policyType": "Recurring"
+            },
+            "policyTags": [
+              "test",
+              "test2"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "10:00:00",
+              "toHour": "11:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "targets": {
+            "targets": [
+              {
+                "roleId": "arn:aws:sso:::permissionSet/ssoins-123456cf01234b990/ps-5ada000000dbc26b",
+                "workspaceId": "123456789123",
+                "orgId": "202555555555"
+              },
+              {
+                "roleId": "arn:aws:sso:::permissionSet/ssoins-123456cf01234b990/ps-5ada000000dbc26b",
+                "workspaceId": "987654321987",
+                "orgId": "202555555555"
+              }
+            ]
+          },
+          "principals": [
+            {
+              "id": "bb1234fc-69d2-49e6-ab57-49b285ab2ehh",
+              "name": "John@cyberark.cloud.27859",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "61cc29ab-c50d-c555-abcd-c92491c592ab",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted"
+        }
+      },
+      "Edit_gcp_policy": {
+        "value": {
+          "metadata": {
+            "policyId": "gcp_800cf187-f558-4143-99bf-84f9b9963cc7",
+            "name": "Example - Edit Google Cloud policy",
+            "description": "Example policy",
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "GCP",
+              "policyType": "Recurring"
+            },
+            "policyTags": [
+              "testgcp"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "10:00:00",
+              "toHour": "11:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "targets": {
+            "targets": [
+              {
+                "roleId": "roles/example.role",
+                "workspaceId": "test-12345",
+                "orgId": "123456789123",
+                "workspaceType": "project"
+              },
+              {
+                "roleId": "roles/example.role1",
+                "workspaceId": "test-12345",
+                "orgId": "123456789123",
+                "workspaceType": "project"
+              }
+            ]
+          },
+          "principals": [
+            {
+              "id": "c2c7bcc6-9560-44e0-8dff-5be221cd55ee",
+              "name": "John@cyberark.cloud.27908",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "0B9A9B0-6CE8-465F-CD03-65766D33B05F",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted"
+        }
+      },
+      "Edit_azure_resource_policy": {
+        "value": {
+          "metadata": {
+            "policyId": "azure_resource_33dc5a1f-8d8a-466b-80fb-7ce42071a82e",
+            "name": "Example - Edit Azure resource policy",
+            "description": "Example policy",
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "Azure",
+              "policyType": "Recurring"
+            },
+            "policyTags": [
+              "testeditpolicy",
+              "testid"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "10:00:00",
+              "toHour": "11:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "targets": {
+            "targets": [
+              {
+                "roleId": "/subscriptions/0l9826f7-1234-1q07-2222-ec1dd1ec714a/providers/Microsoft.Authorization/roleDefinitions/6aaa78f1-f7de-44ca-8722-c64a23943cae",
+                "workspaceId": "subscriptions/0l9826f7-1234-1q07-2222-ec1dd1ec714a",
+                "orgId": "2ca11f05-cea1-40f5-1f0b-6b3f65b8d1a0",
+                "workspaceType": "subscription"
+              },
+              {
+                "roleId": "/subscriptions/93de9312-0905-45fb-8399-ff46c652ea8a/providers/Microsoft.Authorization/roleDefinitions/55cc9ee4-d5d3-4a45-a930-26add3d12345",
+                "workspaceId": "subscriptions/0l9826f7-1234-1q07-2222-ec1dd1ec714a",
+                "orgId": "2ca11f05-cea1-40f5-1f0b-6b3f65b8d1a0",
+                "workspaceType": "subscription"
+              }
+            ]
+          },
+          "principals": [
+            {
+              "id": "b2b5bcc6-1234-11e0-8dff-5be221cd37ff",
+              "name": "John@cyberark.cloud.27901",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "12B9A9B0-6CE8-123F-AB88-65766D33B05u",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted"
+        }
+      },
+      "Edit_azure_entra_policy": {
+        "value": {
+          "metadata": {
+            "policyId": "azure_ad_173dd44b-3d2e-4f5a-a751-e3a8b3c98c5e",
+            "name": "Example - Edit Microsoft Entra ID policy",
+            "description": "Example policy",
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "Azure",
+              "policyType": "Recurring"
+            },
+            "policyTags": [
+              "testing",
+              "testazuread"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "10:00:00",
+              "toHour": "11:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "targets": {
+            "targets": [
+              {
+                "roleId": "1d336d2c-4ae8-42ef-9711-b3604ce3fc2c",
+                "workspaceId": "2ca55f05-abc0-12f5-9f0b-6b3f65b8d1d5",
+                "orgId": "2ca55f05-abc0-12f5-9f0b-6b3f65b8d1d5",
+                "workspaceType": "directory"
+              },
+              {
+                "roleId": "5b784334-f94b-471a-a387-e7219fc49ca2",
+                "workspaceId": "2ca55f05-abc0-12f5-9f0b-6b3f65b8d1d5",
+                "orgId": "2ca55f05-abc0-12f5-9f0b-6b3f65b8d1d5",
+                "workspaceType": "directory"
+              }
+            ]
+          },
+          "principals": [
+            {
+              "id": "c2c7bcc6-9560-44e0-8dff-5be221cd37ee",
+              "name": "John@cyberark.cloud.12345",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "87B9A9B0-6CE8-123F-AB03-65766D33B05R",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted"
+        }
+      },
+      "Get_aws_iam_policy": {
+        "value": {
+          "metadata": {
+            "policyId": "aws_d123e53b-151e-123b-8f07-9ea55888abc5",
+            "name": "Example - Get AWS IAM policy",
+            "description": "Example policy",
+            "status": {
+              "status": "Active",
+              "statusCode": "",
+              "statusDescription": "",
+              "link": ""
+            },
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "AWS",
+              "policyType": "Recurring"
+            },
+            "createdBy": {
+              "user": "John",
+              "time": "2024-04-17T07:53:00.444004+00:00"
+            },
+            "updatedOn": {
+              "user": "John",
+              "time": "2024-04-17T07:53:00.444010+00:00"
+            },
+            "policyTags": [
+              "testaws"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "08:00:00",
+              "toHour": "09:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "principals": [
+            {
+              "id": "c2c7bcc6-1230-11e0-8dff-5be221cd37ff",
+              "name": "John@cyberark.cloud.26111",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "09B9A9B0-6CE8-123F-AB03-65766D33B05U",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted",
+          "targets": {
+            "targets": [
+              {
+                "roleId": "arn:aws:iam::123456789123:role/ExampleReadrole1",
+                "workspaceId": "123456789123",
+                "roleName": "ExampleReadrole1",
+                "workspaceName": "dev"
+              }
+            ]
+          }
+        }
+      },
+      "Get_aws_idc_policy": {
+        "value": {
+          "metadata": {
+            "policyId": "aws_sso_75e96235-947e-4047-ae33-e746300acb6d",
+            "name": "Example - Get AWS IAM Identity Center policy",
+            "description": "Example policy",
+            "status": {
+              "status": "Active",
+              "statusCode": "",
+              "statusDescription": "",
+              "link": ""
+            },
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "AWS",
+              "policyType": "Recurring"
+            },
+            "createdBy": {
+              "user": "John",
+              "time": "2024-04-17T07:44:41.571995+00:00"
+            },
+            "updatedOn": {
+              "user": "John",
+              "time": "2024-04-17T07:45:30.375564+00:00"
+            },
+            "policyTags": [
+              "test",
+              "test2"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "08:00:00",
+              "toHour": "09:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "principals": [
+            {
+              "id": "cc3833fc-69d2-69e6-ab33-49b285ab2eff",
+              "name": "John@cyberark.cloud.27859",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "55cc29ab-c50d-c331-abcd-c12345c592ab",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted",
+          "targets": {
+            "targets": [
+              {
+                "roleId": "arn:aws:sso:::permissionSet/ssoins-123456cf1234b940/ps-12b34e5afd67e89f",
+                "orgId": "123456789123",
+                "workspaceId": "123456789122",
+                "roleName": "examplerole",
+                "workspaceName": "Test1"
+              },
+              {
+                "roleId": "arn:aws:sso:::permissionSet/ssoins-123456cf1234b940/ps-1ada234567dbc89t",
+                "orgId": "123456789123",
+                "workspaceId": "123456789122",
+                "roleName": "examplerole1",
+                "workspaceName": "Test1"
+              }
+            ]
+          }
+        }
+      },
+      "Get_gcp_policy": {
+        "value": {
+          "metadata": {
+            "policyId": "gcp_a12c3ca4-ffd6-4b12-a34b-123eb56e8c0e",
+            "name": "Example - Get Google Cloud policy",
+            "description": "Example policy",
+            "status": {
+              "status": "Active",
+              "statusCode": "",
+              "statusDescription": "",
+              "link": ""
+            },
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "GCP",
+              "policyType": "Recurring"
+            },
+            "createdBy": {
+              "user": "John",
+              "time": "2024-04-17T10:40:15.769149+00:00"
+            },
+            "updatedOn": {
+              "user": "John",
+              "time": "2024-04-17T10:41:27.643509+00:00"
+            },
+            "policyTags": [
+              "testgcp"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "08:00:00",
+              "toHour": "09:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "principals": [
+            {
+              "id": "c2c7bcc6-1234-12e0-8tgg-5be221cd37ff",
+              "name": "John@cyberark.cloud.27901",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "02B9A9B0-6CE8-345F-AB06-12345D33B05U",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted",
+          "targets": {
+            "targets": [
+              {
+                "roleId": "roles/actions.Example1",
+                "orgId": "1234567891234",
+                "workspaceId": "test-12345",
+                "workspaceType": "project",
+                "roleName": "Actions Example1",
+                "workspaceName": "testacc",
+                "rolePackage": "actions",
+                "roleType": 0
+              },
+              {
+                "roleId": "roles/actions.Example2",
+                "orgId": "1234567891234",
+                "workspaceId": "test-12345",
+                "workspaceType": "project",
+                "roleName": "Actions Example2",
+                "workspaceName": "testacc",
+                "rolePackage": "actions",
+                "roleType": 0
+              }
+            ]
+          }
+        }
+      },
+      "Get_azure_resource_policy": {
+        "value": {
+          "metadata": {
+            "policyId": "azure_resource_8fdb301e-472a-48aa-91eb-a5281fe22d95",
+            "name": "Example - Get Azure resource policy",
+            "description": "Example policy",
+            "status": {
+              "status": "Active",
+              "statusCode": "",
+              "statusDescription": "",
+              "link": ""
+            },
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "Azure",
+              "policyType": "Recurring"
+            },
+            "createdBy": {
+              "user": "John",
+              "time": "2024-11-29T10:25:20.273970+00:00"
+            },
+            "updatedOn": {
+              "user": "John",
+              "time": "2024-11-29T10:25:20.273974+00:00"
+            },
+            "policyTags": [
+              "testid",
+              "testeditpolicy"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "08:00:00",
+              "toHour": "09:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "principals": [
+            {
+              "id": "c2c1brc6-1234-44e0-8dff-5be221cd37ff",
+              "name": "John@cyberark.cloud.27555",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "09B9A9B0-6CE9-123F-AB03-65766D33B05I",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted",
+          "targets": {
+            "targets": [
+              {
+                "roleId": "/subscriptions/12de9312-0905-45fb-8399-ff46c652eaca/providers/Microsoft.Authorization/roleDefinitions/c2f4ef07-c644-48eb-af81-4b1b4947fb34",
+                "orgId": "g7a5de91-6a2f-467e-aefa-b3f62876ec6a",
+                "workspaceId": "subscriptions/12de9312-0905-45fb-8399-ff46c652eaca",
+                "workspaceType": "subscription",
+                "roleName": "Examplerole1",
+                "workspaceName": "Test",
+                "roleType": 0
+              },
+              {
+                "roleId": "/subscriptions/12de9312-0905-45fb-8399-ff46c652eaca/providers/Microsoft.Authorization/roleDefinitions/76cc9ee4-d5d3-4a45-a930-26add3d23455",
+                "orgId": "g7a5de91-6a2f-467e-aefa-b3f62876ec6a",
+                "workspaceId": "subscriptions/12de9312-0905-45fb-8399-ff46c652eaca",
+                "workspaceType": "subscription",
+                "roleName": "Examplerole2",
+                "workspaceName": "Test",
+                "roleType": 0
+              }
+            ]
+          }
+        }
+      },
+      "Get_entra_policy": {
+        "value": {
+          "metadata": {
+            "policyId": "azure_ad_44636484-b7ab-42fa-a857-dc7528d2af9d",
+            "name": "Example - Get Microsoft Entra ID policy",
+            "description": "Example policy",
+            "status": {
+              "status": "Active",
+              "statusCode": "",
+              "statusDescription": "",
+              "link": ""
+            },
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "Azure",
+              "policyType": "Recurring"
+            },
+            "createdBy": {
+              "user": "John",
+              "time": "2024-11-29T05:01:50.019925+00:00"
+            },
+            "updatedOn": {
+              "user": "John",
+              "time": "2024-11-29T05:03:28.497624+00:00"
+            },
+            "policyTags": [
+              "testing",
+              "testazuread"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "08:00:00",
+              "toHour": "09:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "principals": [
+            {
+              "id": "c2c1brc6-1234-44e0-8dff-5be221cd37ff",
+              "name": "John@cyberark.cloud.27555",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "09B9A9B0-6CE9-123F-AB03-65766D33B05I",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted",
+          "targets": {
+            "targets": [
+              {
+                "roleId": "d2562ede-74db-457e-a7b6-544e236ebb61",
+                "orgId": "c5a5de91-6a2f-467e-aefa-b3f62876ec6a",
+                "workspaceId": "c5a5de91-6a2f-467e-aefa-b3f62876ec6a",
+                "workspaceType": "directory",
+                "roleName": "Examplerole",
+                "workspaceName": "testdict",
+                "roleType": 0
+              },
+              {
+                "roleId": "9b895d92-2cd3-44c7-9d02-a6ac2d5ea5c3",
+                "orgId": "c5a5de91-6a2f-467e-aefa-b3f62876ec6a",
+                "workspaceId": "c5a5de91-6a2f-467e-aefa-b3f62876ec6a",
+                "workspaceType": "directory",
+                "roleName": "Examplerole",
+                "workspaceName": "testdict",
+                "roleType": 0
+              }
+            ]
+          }
+        }
+      },
+      "Edit_aws_vm_policy": {
+        "value": {
+          "metadata": {
+            "name": "Example - Edit Infrastructure VM Policy",
+            "description": "Example description",
+            "policyTags": [
+              "tag1",
+              "tag2"
+            ],
+            "policyEntitlement": {
+              "targetCategory": "VM",
+              "locationType": "AWS",
+              "policyType": "Recurring"
+            },
+            "timeFrame": {
+              "fromTime": 0,
+              "toTime": 0
+            },
+            "status": {
+              "status": "Active",
+              "statusDescription": "Example description"
+            }
+          },
+          "principals": [
+            {
+              "id": "ec513d58-fc64-4988-aef9-123456789012",
+              "name": "tester@cyberark.cloud",
+              "type": "User",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "09B9A9B0-6CE8-465F-AB03-123456789012"
+            }
+          ],
+          "conditions": {
+            "accessWindow": {
+              "timeZone": "Asia/Jerusalem",
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": 0,
+              "toHour": 0
+            },
+            "maxSessionDuration": 2,
+            "idleTime": 0
+          },
+          "behavior": {
+            "connectAs": {
+              "ssh": {
+                "username": "ec2-user"
+              },
+              "rdp": {
+                "localEphemeralUser": {
+                  "assignGroups": [
+                    "Administrators"
+                  ],
+                  "enableEphemeralUserReconnect": false
+                }
+              }
+            }
+          },
+          "targets": {
+            "AWS": {
+              "accountIds": [],
+              "vpcIds": [],
+              "regions": [],
+              "tags": []
+            }
+          }
+        }
+      },
+      "Edit_azure_group_policy": {
+        "value": {
+          "metadata": {
+            "name": "Test Group policy",
+            "description": "Policy with example of an Azure Group policy",
+            "policyTags": [
+              "Azure",
+              "Group"
+            ],
+            "timeZone": "Asia/Jerusalem",
+            "policyEntitlement": {
+              "targetCategory": "Groups",
+              "locationType": "Azure",
+              "policyType": "Recurring"
+            },
+            "timeFrame": {
+              "fromTime": 0,
+              "toTime": 0
+            }
+          },
+          "principals": [
+            {
+              "id": "07c938f9-3c8b-4800-9aa0-3eb274598928",
+              "name": "eva2@CyberArkDevTestLabs.onmicrosoft.com",
+              "type": "USER",
+              "sourceDirectoryName": "Microsoft Entra ID CyberArk Dev Test Labs",
+              "sourceDirectoryId": "170c098a-8535-6b76-a7ac-1a0df72f3313"
+            }
+          ],
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": 0,
+              "toHour": 0
+            },
+            "maxSessionDuration": 2,
+            "idleTime": 10
+          },
+          "targets": [
+            {
+              "groupId": "c63819e2-2397-4faa-850f-4abde34e52fb",
+              "directoryId": "280a06f4-3f9b-4910-8967-053a914e314e"
+            }
+          ]
+        }
+      },
+      "Create_aws_vm_policy": {
+        "value": {
+          "metadata": {
+            "name": "Example - Create Infrastructure VM Policy",
+            "description": "Example description",
+            "policyTags": [
+              "tag1",
+              "tag2"
+            ],
+            "policyEntitlement": {
+              "targetCategory": "VM",
+              "locationType": "AWS",
+              "policyType": "Recurring"
+            },
+            "timeFrame": {
+              "fromTime": 0,
+              "toTime": 0
+            },
+            "status": {
+              "status": "Active",
+              "statusDescription": "Example status description"
+            }
+          },
+          "principals": [
+            {
+              "id": "ec513d58-fc64-4988-aef9-123456789012",
+              "name": "tester@cyberark.cloud",
+              "type": "User",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "09B9A9B0-6CE8-465F-AB03-123456789012"
+            }
+          ],
+          "conditions": {
+            "accessWindow": {
+              "timeZone": "Asia/Jerusalem",
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": 0,
+              "toHour": 0
+            },
+            "maxSessionDuration": 2,
+            "idleTime": 0
+          },
+          "behavior": {
+            "connectAs": {
+              "ssh": {
+                "username": "ec2-user"
+              },
+              "rdp": {
+                "localEphemeralUser": {
+                  "assignGroups": [
+                    "Administrators"
+                  ],
+                  "enableEphemeralUserReconnect": false
+                }
+              }
+            }
+          },
+          "targets": {
+            "AWS": {
+              "accountIds": [],
+              "vpcIds": [],
+              "regions": [],
+              "tags": []
+            }
+          }
+        }
+      },
+      "Get_aws_vm_policy": {
+        "value": {
+          "metadata": {
+            "policyId": "7cedac1a-a861-4eff-891f-123456789012",
+            "name": "Example - Infrastucture VM Policy",
+            "description": "Example description",
+            "status": {
+              "status": "Active",
+              "statusCode": 200,
+              "statusDescription": "Example status description"
+            },
+            "timeFrame": {
+              "fromTime": 0,
+              "toTime": 0
+            },
+            "policyEntitlement": {
+              "targetCategory": "VM",
+              "locationType": "AWS",
+              "policyType": "Recurring"
+            },
+            "createdBy": {
+              "user": "tester@cyberark.cloud",
+              "time": "2024-11-18T09:41:10"
+            },
+            "updatedBy": {
+              "user": "tester@cyberark.cloud",
+              "time": "2024-11-18T09:41:10"
+            },
+            "policyTags": []
+          },
+          "conditions": {
+            "accessWindow": {
+              "timeZone": "Asia/Jerusalem",
+              "daysOfTheWeek": [
+                5,
+                1,
+                6,
+                0,
+                4,
+                2,
+                3
+              ],
+              "fromHour": 0,
+              "toHour": 0
+            },
+            "maxSessionDuration": 2,
+            "idleTime": 0
+          },
+          "principals": [
+            {
+              "id": "ec513d58-fc64-4988-aef9-123456789012",
+              "name": "tester@cyberark.cloud",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "09B9A9B0-6CE8-465F-AB03-123456789012",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted",
+          "behavior": {
+            "connectAs": {
+              "ssh": {
+                "username": "ec2-user"
+              },
+              "rdp": {
+                "localEphemeralUser": {
+                  "assignGroups": [
+                    "Administrators"
+                  ],
+                  "enableEphemeralUserReconnect": false
+                },
+                "domainEphemeralUser": 0
+              }
+            }
+          },
+          "targets": {
+            "AWS": {
+              "regions": [],
+              "tags": [],
+              "vpcIds": [],
+              "accountIds": []
+            }
+          }
+        }
+      },
+      "Create_infra_db_policy": {
+        "value": {
+          "metadata": {
+            "name": "All Databases Policy",
+            "description": "Policy with example of all supported databases and authentication methods",
+            "policyTags": [
+              "All_Databases",
+              "MySQL",
+              "MariaDB",
+              "PostgreSQL",
+              "SQL Server",
+              "Oracle",
+              "Db2",
+              "MongoDB"
+            ],
+            "timeZone": "Asia/Jerusalem",
+            "policyEntitlement": {
+              "targetCategory": "DB",
+              "locationType": "FQDN/IP",
+              "policyType": "Recurring"
+            },
+            "timeFrame": {
+              "fromTime": 0,
+              "toTime": 0
+            },
+            "status": {
+              "status": "Active",
+              "statusCode": "200",
+              "statusDescription": "All good"
+            }
+          },
+          "principals": [
+            {
+              "id": "7fad78d3-42e2-46e1-a252-4a8168e94fcf",
+              "name": "AutomationGroupOnly",
+              "type": "Group",
+              "sourceDirectoryName": "Microsoft Entra ID cybrsca",
+              "sourceDirectoryId": "170c098a-8535-6b76-a7ac-1a0df72f3313"
+            },
+            {
+              "id": "0287de75-ef38-44f1-a008-b9aa3721055f",
+              "name": "tina@cyberark.cloud.27901",
+              "type": "User",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "09B9A9B0-6CE8-465F-AB03-65766D33B05E"
+            },
+            {
+              "id": "cc1f755c-56d0-46bb-9a58-fbe455e78ccb",
+              "name": "robert@cyberark.cloud.27901",
+              "type": "User",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "09B9A9B0-6CE8-465F-AB03-65766D33B05E"
+            },
+            {
+              "id": "c2c7bcc6-9560-44e0-8dff-5be221cd37ee",
+              "name": "david@cyberark.cloud.27901",
+              "type": "User",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "09B9A9B0-6CE8-465F-AB03-65766D33B05E"
+            },
+            {
+              "id": "bec88b33_304b_424f_852e_29fa1332f8f7",
+              "name": "Administration Role",
+              "type": "Role",
+              "sourceDirectoryName": "Identity",
+              "sourceDirectoryId": "Identity"
+            }
+          ],
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": 0,
+              "toHour": 0
+            },
+            "maxSessionDuration": 2,
+            "idleTime": 10
+          },
+          "targets": {
+            "FQDN/IP": {
+              "instances": [
+                {
+                  "instanceName": "My-IAM-MySQL",
+                  "instanceId": "197011",
+                  "instanceType": "MySQL",
+                  "authenticationMethod": "rds_iam_user_auth",
+                  "profile": {
+                    "dbUser": "iam_user"
+                  }
+                },
+                {
+                  "instanceName": "My-Local-MySQL",
+                  "instanceId": "197012",
+                  "instanceType": "MySQL",
+                  "authenticationMethod": "db_auth",
+                  "profile": {
+                    "roles": [
+                      "hr",
+                      "MySQL_role"
+                    ]
+                  }
+                },
+                {
+                  "instanceName": "My-Local-MariaDB",
+                  "instanceId": "197014",
+                  "instanceType": "MariaDB",
+                  "authenticationMethod": "db_auth",
+                  "profile": {
+                    "roles": [
+                      "hr",
+                      "MariaDB_role"
+                    ]
+                  }
+                },
+                {
+                  "instanceName": "My-IAM-MariaDB",
+                  "instanceId": "197013",
+                  "instanceType": "MariaDB",
+                  "authenticationMethod": "rds_iam_user_auth",
+                  "profile": {
+                    "dbUser": "root"
+                  }
+                },
+                {
+                  "instanceName": "My-IAM-PostgreSQL",
+                  "instanceId": "197015",
+                  "instanceType": "Postgres",
+                  "authenticationMethod": "rds_iam_user_auth",
+                  "profile": {
+                    "dbUser": "postgres"
+                  }
+                },
+                {
+                  "instanceName": "My-Local-PostgreSQL",
+                  "instanceId": "197016",
+                  "instanceType": "Postgres",
+                  "authenticationMethod": "db_auth",
+                  "profile": {
+                    "roles": [
+                      "hr",
+                      "PostgreSQL_role"
+                    ]
+                  }
+                },
+                {
+                  "instanceName": "my-oracle-db",
+                  "instanceId": "196946",
+                  "instanceType": "Oracle",
+                  "authenticationMethod": "oracle_auth",
+                  "profile": {
+                    "roles": [
+                      "Oracle_custom_role"
+                    ],
+                    "dbaRole": true,
+                    "sysdbaRole": true,
+                    "sysoperRole": true
+                  }
+                },
+                {
+                  "instanceName": "My-Local-MongoDB",
+                  "instanceId": "197018",
+                  "instanceType": "Mongo",
+                  "authenticationMethod": "mongo_auth",
+                  "profile": {
+                    "globalBuiltinRoles": [
+                      "root",
+                      "dbAdminAnyDatabase",
+                      "userAdminAnyDatabase",
+                      "readWriteAnyDatabase",
+                      "readAnyDatabase",
+                      "backup",
+                      "restore",
+                      "clusterAdmin",
+                      "clusterManager",
+                      "clusterMonitor",
+                      "hostManager"
+                    ],
+                    "globalCustomRoles": [],
+                    "databaseBuiltinRoles": {
+                      "Employees_DB": [
+                        "userAdmin",
+                        "dbOwner",
+                        "dbAdmin",
+                        "readWrite",
+                        "read"
+                      ]
+                    },
+                    "databaseCustomRoles": {
+                      "Employees_DB": [
+                        "MongoDB_custom_db_role",
+                        "MongoDB_custom_db_role_2"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "instanceName": "My-AD-Db2",
+                  "instanceId": "197019",
+                  "instanceType": "DB2",
+                  "authenticationMethod": "ldap_auth",
+                  "profile": {
+                    "assignGroups": [
+                      "AD_Emploees_Group",
+                      "AD_Emploees_Group_2"
+                    ]
+                  }
+                },
+                {
+                  "instanceName": "MSSQL-local",
+                  "instanceId": "196914",
+                  "instanceType": "MSSQL",
+                  "authenticationMethod": "sqlserver_auth",
+                  "profile": {
+                    "globalBuiltinRoles": [
+                      "sysadmin",
+                      "serveradmin",
+                      "securityadmin",
+                      "processadmin",
+                      "setupadmin",
+                      "bulkadmin",
+                      "diskadmin",
+                      "dbcreator"
+                    ],
+                    "globalCustomRoles": [
+                      "SQL_Server_instance_custom_role_1",
+                      "SQL_Server_instance_custom_role_2"
+                    ],
+                    "databaseBuiltinRoles": {
+                      "SQL_Server_Employees_DB_1": [
+                        "db_owner",
+                        "db_securityadmin",
+                        "db_accessadmin",
+                        "db_backupoperator",
+                        "db_ddladmin",
+                        "db_datawriter",
+                        "db_datareader",
+                        "db_denydatawriter",
+                        "db_denydatareader"
+                      ],
+                      "SQL_Server_Employees_DB_2": [
+                        "db_owner",
+                        "db_securityadmin",
+                        "db_accessadmin",
+                        "db_backupoperator",
+                        "db_ddladmin",
+                        "db_datawriter",
+                        "db_datareader",
+                        "db_denydatawriter",
+                        "db_denydatareader"
+                      ]
+                    },
+                    "databaseCustomRoles": {
+                      "SQL_Server_Employees_DB_1": [
+                        "SQL_Server_database_custom_role_1",
+                        "SQL_Server_database_custom_role_2"
+                      ],
+                      "SQL_Server_Employees_DB_2": [
+                        "SQL_Server_database_custom_role_1",
+                        "SQL_Server_database_custom_role_2"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "instanceName": "SQL Server",
+                  "instanceId": "196813",
+                  "instanceType": "MSSQL",
+                  "authenticationMethod": "ldap_auth",
+                  "profile": {
+                    "assignGroups": [
+                      "SQL_Server_AD_group",
+                      "SQL_Server_AD_group_2"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "Create_azure_group_policy": {
+        "value": {
+          "metadata": {
+            "name": "Test Group policy",
+            "description": "Policy with example of an Azure Group policy",
+            "policyTags": [
+              "Azure",
+              "Group"
+            ],
+            "timeZone": "Asia/Jerusalem",
+            "policyEntitlement": {
+              "targetCategory": "Groups",
+              "locationType": "Azure",
+              "policyType": "Recurring"
+            },
+            "timeFrame": {
+              "fromTime": 0,
+              "toTime": 0
+            },
+            "status": {
+              "status": "Active",
+              "statusCode": "200",
+              "statusDescription": "All good"
+            }
+          },
+          "principals": [
+            {
+              "id": "07c938f9-3c8b-4800-9aa0-3eb274598928",
+              "name": "eva2@CyberArkDevTestLabs.onmicrosoft.com",
+              "type": "USER",
+              "sourceDirectoryName": "Microsoft Entra ID CyberArk Dev Test Labs",
+              "sourceDirectoryId": "170c098a-8535-6b76-a7ac-1a0df72f3313"
+            }
+          ],
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": 0,
+              "toHour": 0
+            },
+            "maxSessionDuration": 2,
+            "idleTime": 10
+          },
+          "targets": [
+            {
+              "groupId": "c63819e2-2397-4faa-850f-4abde34e52fb",
+              "directoryId": "280a06f4-3f9b-4910-8967-053a914e314e"
+            }
+          ]
+        }
+      },
+      "Get_azure_group_policy": {
+        "value": {
+          "metadata": {
+            "policyId": "aws_d123e53b-151e-123b-8f07-9ea55888abc5",
+            "name": "Example - Get AZURE",
+            "description": "Example policy",
+            "status": {
+              "status": "Active",
+              "statusCode": "",
+              "statusDescription": "",
+              "link": ""
+            },
+            "timeFrame": {
+              "fromTime": "2023-07-05T12:34:56",
+              "toTime": "2023-07-06T12:34:56"
+            },
+            "policyEntitlement": {
+              "targetCategory": "Cloud console",
+              "locationType": "AWS",
+              "policyType": "Recurring"
+            },
+            "createdBy": {
+              "user": "John",
+              "time": "2024-04-17T07:53:00.444004+00:00"
+            },
+            "updatedOn": {
+              "user": "John",
+              "time": "2024-04-17T07:53:00.444010+00:00"
+            },
+            "policyTags": [
+              "testaws"
+            ],
+            "timeZone": "Asia/Calcutta"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "fromHour": "08:00:00",
+              "toHour": "09:00:00"
+            },
+            "maxSessionDuration": 1
+          },
+          "principals": [
+            {
+              "id": "c2c7bcc6-1230-11e0-8dff-5be221cd37ff",
+              "name": "John@cyberark.cloud.26111",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "09B9A9B0-6CE8-123F-AB03-65766D33B05U",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted",
+          "targets": [
+            {
+              "groupId": "72cc6473-27ef-4027-9a6a-fcc2b73f0cd2",
+              "groupName": "AAD_Dev",
+              "directoryId": "280a06f4-3f9b-4910-8967-053a914e314e",
+              "groupType": "security",
+              "description": "AAD device",
+              "directoryName": "280a06f4-3f9b-4910-8967-053a914e314e"
+            }
+          ]
+        }
+      },
+      "Get_infra_db_policy": {
+        "value": {
+          "metadata": {
+            "policyId": "5af2ccfe-98dd-42ad-aa5d-21ffdee1c2ed",
+            "name": "My-Policy-All_DBs",
+            "description": "",
+            "status": {
+              "status": "Active",
+              "statusCode": "200",
+              "statusDescription": "All good",
+              "link": 0
+            },
+            "timeFrame": {
+              "fromTime": 0,
+              "toTime": 0
+            },
+            "policyEntitlement": {
+              "targetCategory": "DB",
+              "locationType": "FQDN/IP",
+              "policyType": "Recurring"
+            },
+            "createdBy": {
+              "user": "david@cyberark.cloud.27901",
+              "time": "2025-04-03T15:54:29.317007"
+            },
+            "updatedOn": {
+              "user": "tina@cyberark.cloud.27901",
+              "time": "2025-04-08T12:14:57.471631"
+            },
+            "policyTags": [
+              "All_DB's",
+              "E2E"
+            ],
+            "timeZone": "Asia/Jerusalem"
+          },
+          "conditions": {
+            "accessWindow": {
+              "daysOfTheWeek": [
+                4,
+                0,
+                5,
+                6,
+                3,
+                1,
+                2
+              ],
+              "fromHour": 0,
+              "toHour": 0
+            },
+            "maxSessionDuration": 2,
+            "idleTime": 10
+          },
+          "principals": [
+            {
+              "id": "1",
+              "name": "rkweak@cyberark.cloud.27901",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "CyberArk Cloud Directory",
+              "type": "USER"
+            },
+            {
+              "id": "1",
+              "name": "tina@cyberark.cloud.27901",
+              "sourceDirectoryName": "CyberArk Cloud Directory",
+              "sourceDirectoryId": "CyberArk Cloud Directory",
+              "type": "USER"
+            }
+          ],
+          "delegationClassification": "Unrestricted",
+          "behavior": 0,
+          "targets": {
+            "FQDN/IP": {
+              "instances": [
+                {
+                  "instanceName": "Access-Authorization-MariaDB-IAM",
+                  "instanceType": "MariaDB",
+                  "instanceId": "197081",
+                  "authenticationMethod": "rds_iam_user_auth",
+                  "profile": {
+                    "dbUser": "adb_iam_user"
+                  }
+                },
+                {
+                  "instanceName": "Access-Authorization-MariaDB-Local user",
+                  "instanceType": "MariaDB",
+                  "instanceId": "197078",
+                  "authenticationMethod": "db_auth",
+                  "profile": {
+                    "roles": [
+                      "hr"
+                    ]
+                  }
+                },
+                {
+                  "instanceName": "Access-Authorization-MySQL-IAM",
+                  "instanceType": "MySQL",
+                  "instanceId": "197080",
+                  "authenticationMethod": "rds_iam_user_auth",
+                  "profile": {
+                    "dbUser": "adb_iam_user"
+                  }
+                },
+                {
+                  "instanceName": "Access-Authorization-MySQL-Local user",
+                  "instanceType": "MySQL",
+                  "instanceId": "197044",
+                  "authenticationMethod": "db_auth",
+                  "profile": {
+                    "roles": [
+                      "hr"
+                    ]
+                  }
+                },
+                {
+                  "instanceName": "Access-Authorization-PostgreSQL-IAM",
+                  "instanceType": "Postgres",
+                  "instanceId": "197082",
+                  "authenticationMethod": "rds_iam_user_auth",
+                  "profile": {
+                    "dbUser": "adb_iam_user"
+                  }
+                },
+                {
+                  "instanceName": "Access-Authorization-PostgreSQL-Local user",
+                  "instanceType": "Postgres",
+                  "instanceId": "197079",
+                  "authenticationMethod": "db_auth",
+                  "profile": {
+                    "roles": [
+                      "hr"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "x-stoplight": {
+    "id": "ojkqsc9c46a48"
+  }
+}

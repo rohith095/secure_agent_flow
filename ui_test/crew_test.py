@@ -57,7 +57,7 @@ iam_knowledge = StringKnowledgeSource(
 
 # Create API documentation knowledge source
 api_docs_knowledge = JSONKnowledgeSource(
-    file_paths=["Secure Cloud Access APIs.json"],
+    file_paths=["CyberArk-uap-schema-api-main-resolved.json"],
     metadata={"source": "sca_api_docs", "version": "2024"}
 )
 
