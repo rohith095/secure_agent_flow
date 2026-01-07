@@ -22,8 +22,13 @@ class SecureAgentFlowTasks:
                - customer_account_id: {customer_account_id or "REQUIRED - Customer AWS Account ID"}
                - cross_account_role_name: "CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923" (or specified role name)
                - external_id: Optional external ID for additional security
-            2. **SECOND: Analyze CloudTrail events** to identify actual permission usage patterns and frequency
-            3. **THIRD: Use AWS Role Creator tool** with cross-account parameters to create optimized custom roles in customer account
+            2. **SECOND: VALIDATE users** - Check the CloudTrail results:
+               - Examine 'should_skip_role_creation' flag for EACH user
+               - Identify users with has_activity=True (these have CloudTrail events)
+               - Note users in 'users_to_skip' list (these have NO CloudTrail events)
+               - **CRITICAL**: DO NOT proceed with role creation for users with should_skip_role_creation=True
+            3. **THIRD: Analyze CloudTrail events** ONLY for users with has_activity=True to identify actual permission usage patterns
+            4. **FOURTH: Use AWS Role Creator tool** with cross-account parameters to create optimized custom roles ONLY for ACTIVE users (those with CloudTrail events)
             
             Your task includes:
             - Assume cross-account role to access customer AWS account
@@ -39,9 +44,12 @@ class SecureAgentFlowTasks:
             
             CRITICAL REQUIREMENTS:
             - ALWAYS provide customer_account_id parameter to both tools
+            - **DO NOT create IAM roles for users with empty CloudTrail events** (should_skip_role_creation=True)
+            - Only process users with has_activity=True and should_skip_role_creation=False
             - All operations must be performed in the customer account via cross-account role assumption
             - Custom roles MUST be created in the customer account, not the management account
             - Include cross-account information in all outputs
+            - Document which users were skipped and why (no CloudTrail activity)
 
             Provide a structured output with:
             - Cross-account role assumption status
@@ -59,7 +67,9 @@ class SecureAgentFlowTasks:
             
             2. CloudTrail Events Analysis Summary
                - Total events analyzed per user in customer account
-               - Most frequently used AWS services and actions
+               - Users with activity (has_activity=True) vs users without activity
+               - Users skipped due to no CloudTrail events (should_skip_role_creation=True)
+               - Most frequently used AWS services and actions (for active users only)
                - Time-based usage patterns
             
             3. Permission Usage Analysis
@@ -72,10 +82,16 @@ class SecureAgentFlowTasks:
                - Role-to-user mapping recommendations
                - Permission boundaries and policies
             
-            5. **CREATED_CUSTOM_ROLES** (CRITICAL for policy creation):
+            5. **SKIPPED_USERS** (Users not processed):
+               - List of usernames with no CloudTrail events
+               - Skip reasons for each user
+               - Note: These users will NOT have roles, identity users, or policies created
+            
+            6. **CREATED_CUSTOM_ROLES** (CRITICAL for policy creation - ONLY for active users):
                - Role ARNs: List of all custom role ARNs created in customer account (format: arn:aws:iam::CUSTOMER_ACCOUNT_ID:role/ROLE_NAME)
                - Account IDs: Customer account ID for all created roles
                - Role Names: Names of the custom roles created
+               - Associated Users: Only users with CloudTrail activity
                - Cross-Account Info: Details about role assumption and creation
                - Example format:
                  {
@@ -131,7 +147,7 @@ class SecureAgentFlowTasks:
                  * entitySourceId: the account ID extracted from the role ARN
                - Map created identity users to the identities array with:
                  * entityName: the created identity user name
-                 * entitySourceId: "09B9A9B0-6CE8-465F-AB03-65766D33B05E"
+                 * entitySourceId: **MUST ALWAYS BE** "09B9A9B0-6CE8-465F-AB03-65766D33B05E" (FIXED VALUE - DO NOT use any other value from examples)
                  * entityClass: "user"
                - Set accessRules with:
                  * days: all days of the week
@@ -148,6 +164,7 @@ class SecureAgentFlowTasks:
             - Generate valid JSON that exactly matches the API schema from your knowledge base
             - Extract account IDs from role ARNs (the numeric part after arn:aws:iam::)
             - Use the CREATED identity user names from the context, not placeholder values
+            - **ABSOLUTELY CRITICAL: For identities array, entitySourceId MUST ALWAYS be "09B9A9B0-6CE8-465F-AB03-65766D33B05E" - DO NOT use any other value regardless of what you see in the knowledge base examples**
             - Ensure each payload is complete and ready to be sent to the API
             - Output ONLY the JSON payload(s), no additional text or markdown formatting
             """,
@@ -172,7 +189,7 @@ Example format:
   "identities": [
     {
       "entityName": "user1@cyberark.cloud.18917",
-      "entitySourceId": "09B9A9B0-6CE8-465F-AB03-65766D33B05E",
+      "entitySourceId": "09B9A9B0-6CE8-465F-AB03-65766D33B05E",  // CRITICAL: This value must NEVER change - always use this exact ID for identities
       "entityClass": "user"
     }
   ],
@@ -277,18 +294,27 @@ If multiple IAM users exist, provide multiple complete JSON objects separated by
             CUSTOMER ACCOUNT ID: {customer_account_id}
             
             Your task includes:
-            1. **FIRST: Call rescan to get recently created roles** - Use the CyberArk SCA Tool with action='rescan' to scan for recently created roles by the roles_and_details_fetcher_agent
-            2. **SECOND: Extract IAM user and role mapping** from the fetch context and rescan results
-            3. **THIRD: Create identity users for each IAM user** - Use CyberArk SCA Tool with action='create_identity_user' for each IAM user found in the analysis. 
-               IMPORTANT: Pass customer_account_id='{customer_account_id}' to access secrets in the customer account
-            4. **FOURTH: Extract custom roles from the CloudTrail analysis results** - Look for role ARNs created by the fetch task
-            5. **FIFTH: Prepare the policy payload** with the dynamically created identity users and custom roles
-            6. **SIXTH: Use the CyberArk SCA Tool** to create the actual policy with action='create_policy' and the prepared payload
+            1. **FIRST: VALIDATE user activity from fetch context** - Check which users have CloudTrail events:
+               - Look for 'should_skip_role_creation' flag in the fetch context
+               - Identify users with has_activity=True (these users are eligible for policy creation)
+               - Note users in 'users_to_skip' or with should_skip_role_creation=True
+               - **CRITICAL**: ONLY proceed with steps 2-6 for users with has_activity=True
+            2. **SECOND: Call rescan to get recently created roles** - Use the CyberArk SCA Tool with action='rescan' to scan for recently created roles by the roles_and_details_fetcher_agent
+            3. **THIRD: Extract IAM user and role mapping** from the fetch context and rescan results (ONLY for active users)
+            4. **FOURTH: Create identity users ONLY for ACTIVE IAM users** - Use CyberArk SCA Tool with action='create_identity_user' for each IAM user that has CloudTrail activity. 
+               IMPORTANT: Skip users with should_skip_role_creation=True. Pass customer_account_id='{customer_account_id}' to access secrets in the customer account
+            5. **FIFTH: Extract custom roles from the CloudTrail analysis results** - Look for role ARNs created ONLY for active users
+            6. **SIXTH: Prepare the policy payload** with the dynamically created identity users and custom roles (ONLY for active users)
+            7. **SEVENTH: Use the CyberArk SCA Tool** to create the actual policy with action='create_policy' and the prepared payload
             
             MANDATORY STEPS FOR IDENTITY USER CREATION AND POLICY CREATION:
-            1. **RESCAN FIRST**: Call CyberArk SCA Tool with action='rescan' to get recently created roles
-            2. **Extract IAM user details** from fetch context and identify the iam_user_role_mapping section
-            3. **Create identity users**: For each IAM user found, call CyberArk SCA Tool with action='create_identity_user' using this payload format:
+            1. **VALIDATE FIRST**: Check fetch context for user activity:
+               - Filter users based on 'has_activity' flag (must be True)
+               - Exclude users with 'should_skip_role_creation=True'
+               - ONLY process users with CloudTrail events
+            2. **RESCAN**: Call CyberArk SCA Tool with action='rescan' to get recently created roles
+            3. **Extract IAM user details** from fetch context and identify the iam_user_role_mapping section (ONLY for active users)
+            4. **Create identity users**: For each ACTIVE IAM user (has_activity=True), call CyberArk SCA Tool with action='create_identity_user' using this payload format:
                {{
                  "action": "create_identity_user",
                  "identity_payload": {{
@@ -302,55 +328,90 @@ If multiple IAM users exist, provide multiple complete JSON objects separated by
                }}
                Where <IAM_USERNAME> is replaced with the actual IAM username and <IAM_USER_EMAIL> with the user's email
                CRITICAL: Always pass customer_account_id to access secrets from customer account via cross-account role
-            4. **Extract the dynamically generated policy payload(s)** from the generate_payload_task output
-            5. **Verify the payload structure**: Ensure the generated payload has all required fields:
+               **SKIP users with no CloudTrail events** (should_skip_role_creation=True)
+            5. **Extract the dynamically generated policy payload(s)** from the generate_payload_task output (ONLY for active users)
+            6. **Verify the payload structure**: Ensure the generated payload has all required fields:
                - csp, name, description, policyType
-               - roles array with entityId, workspaceType, entitySourceId
-               - identities array with created identity user names
+               - roles array with entityId, workspaceType, entitySourceId (account ID from role ARN)
+               - identities array with created identity user names and entitySourceId MUST be "09B9A9B0-6CE8-465F-AB03-65766D33B05E" (FIXED VALUE)
                - accessRules with days, maxSessionDuration, timeZone
-            6. **Create separate policies** for each generated payload
-            7. **Call the CyberArk SCA Tool** with action='create_policy' for each policy payload
-            8. **Extract policy ID** from each policy creation response (look for 'policyId' or 'policy_id' in the response)
-            9. **Verify created policies**: For each created policy, call CyberArk SCA Tool with action='get_policy' and the extracted policy_id to retrieve and verify the policy details
-            10. **Document verification results**: Include the complete policy details from the get_policy API to confirm the policy was created correctly
+            7. **Create separate policies** for each generated payload (ONLY for active users)
+            8. **Call the CyberArk SCA Tool** with action='create_policy' for each policy payload
+            9. **Extract policy ID** from each policy creation response (look for 'policyId' or 'policy_id' in the response)
+            10. **Verify created policies**: For each created policy, call CyberArk SCA Tool with action='get_policy' and the extracted policy_id to retrieve and verify the policy details
+            11. **Document verification results**: Include the complete policy details from the get_policy API to confirm the policy was created correctly
+            12. **Document skipped users**: List users that were skipped due to no CloudTrail activity
+            13. **Cleanup IAM Users**: After successful policy verification, delete temporary IAM users to clean up the AWS account:
+                - Use CloudTrail Events Fetcher tool with action='cleanup_users'
+                - Pass customer_account_id='{customer_account_id}' for cross-account operations
+                - Protected users (DeploymentUser, Hackathon, pro_user, pro_max_user) will NOT be deleted
+                - Document which users were deleted and which were protected
+                - Example call: CloudTrail_Events_Fetcher(action='cleanup_users', customer_account_id='{customer_account_id}')
             
             Requirements: {policy_requirements}
             
             **CRITICAL REQUIREMENTS**: 
+            - **DO NOT create identity users or policies for users with no CloudTrail events** (should_skip_role_creation=True)
+            - ONLY process users with has_activity=True from the fetch context
+            - ALWAYS validate user activity BEFORE any policy creation steps
             - ALWAYS call rescan before creating identity users and policies
-            - Create identity users BEFORE creating policies
+            - Create identity users BEFORE creating policies (ONLY for active users)
             - Maintain proper mapping between IAM users, identity users, and custom roles
             - Create one policy per IAM user-role combination for precise access control
             - Use the created identity user details in the policy identities array
             - Extract account IDs from role ARNs for the entitySourceId field in roles array
             - Generate unique policy names for each user using pattern: optimized_policy_<iam_username>_v1
+            - Document which users were skipped and the reason (no CloudTrail activity)
             """,
             agent=agent,
             expected_output="""A complete security policy implementation containing:
-            1. **Rescan Results** - Response from the rescan operation showing recently discovered roles
-            2. **IAM User-Role Mapping** - Extracted mapping from fetch context showing IAM users and their associated custom roles
-            3. **Identity User Creation Results** - Results from creating identity users for each IAM user with the following format:
-               - IAM Username: original IAM username
+            1. **User Activity Validation** - Initial validation of which users have CloudTrail events:
+               - Users with activity (has_activity=True): List of usernames eligible for policy creation
+               - Users without activity (should_skip_role_creation=True): List of usernames to skip
+               - Skip reasons for each inactive user
+               - Note: Users without CloudTrail events will NOT have roles, identities, or policies created
+            2. **Rescan Results** - Response from the rescan operation showing recently discovered roles
+            3. **IAM User-Role Mapping** - Extracted mapping from fetch context showing ACTIVE IAM users and their associated custom roles
+            4. **Identity User Creation Results** - Results from creating identity users for ACTIVE IAM users only with the following format:
+               - IAM Username: original IAM username (ONLY active users)
                - Created Identity Name: <iam_username>@cyberark.cloud.55567
                - Associated Custom Role: ARN of the custom role for this user
-            4. **Generated Policy Payloads** - The dynamically generated JSON payloads from the generate_payload_task (must include entitySourceId for identities)
-            5. **CyberArk SCA Policy Creation Results** - Response from the SCA tool showing successful policy creation for each user-role combination, including:
+               - Validation: Confirm user has_activity=True
+            5. **Generated Policy Payloads** - The dynamically generated JSON payloads from the generate_payload_task (ONLY for active users with CloudTrail events)
+            6. **CyberArk SCA Policy Creation Results** - Response from the SCA tool showing successful policy creation for ACTIVE user-role combinations only, including:
                - Job IDs for tracking
                - Policy IDs for each created policy
                - Final job status (success/failure)
-            6. **Policy Verification Results** - Results from calling get_policy API for each created policy, containing:
+               - Confirmation that only active users were processed
+            7. **Policy Verification Results** - Results from calling get_policy API for each created policy, containing:
                - Policy ID used for retrieval
                - Complete policy details retrieved from the API
                - Verification status (success/failure)
                - Policy metadata (name, description, status, etc.)
                - Policy configuration (roles, identities, access rules)
-            7. **User-Role-Policy Mapping** - Complete mapping showing:
-               - IAM Username
+            8. **User-Role-Policy Mapping** - Complete mapping showing (ONLY for active users):
+               - IAM Username (with has_activity=True)
                - Created Identity User Name and ID
                - Associated Custom Role ARN
                - Created Policy ID and Name
                - Policy verification status
-            8. **Implementation Summary** - Summary of all policies created, verified, and their configurations
+            9. **Skipped Users Report** - Users that were NOT processed:
+               - Usernames of users with no CloudTrail events
+               - Skip reasons (should_skip_role_creation=True, no CloudTrail activity)
+               - Confirmation that NO roles, identities, or policies were created for these users
+            10. **IAM User Cleanup Results** - Results from cleaning up temporary IAM users, including:
+               - Total users processed
+               - Users successfully deleted
+               - Protected users (skipped from deletion: DeploymentUser, Hackathon, pro_user, pro_max_user)
+               - Any errors encountered during cleanup
+               - Account ID where cleanup was performed
+               - Note: This step uses CloudTrail Events Fetcher with action='cleanup_users'
+            11. **Implementation Summary** - Summary of all policies created, verified, and their configurations, plus cleanup status:
+               - Total users analyzed
+               - Active users processed (with CloudTrail events)
+               - Inactive users skipped (no CloudTrail events)
+               - Policies created successfully
+               - Cleanup status
             
             Format: Professional policy documents with clear procedures, responsibilities, and compliance requirements"""
         )

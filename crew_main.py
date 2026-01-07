@@ -142,7 +142,6 @@ class SecureAgentFlowCrew:
 if __name__ == "__main__":
     print("Initializing SecureAgentFlowCrew")
     crew = SecureAgentFlowCrew()
-    os.environ["WEBSOCKET_CONNECTION_ID"]= "123456"
     print("Starting workflow execution")
     context_input = """
     Analyze CloudTrail events for a specific AWS IAM user to understand their actual permission usage patterns.

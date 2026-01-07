@@ -13,6 +13,8 @@ load_dotenv()
 
 class CloudTrailFetcherInput(BaseModel):
     """Input schema for CloudTrail Events Fetcher tool."""
+    action: Optional[str] = Field(default="fetch_events",
+                                  description="Action to perform: 'fetch_events' (default) to fetch CloudTrail data, or 'cleanup_users' to delete IAM users")
     specific_user: Optional[str] = Field(default=None,
                                          description="Specific IAM username to fetch events for (optional)")
     customer_account_id: Optional[str] = Field(default=None, description="Customer AWS account ID to assume role into")
@@ -20,16 +22,21 @@ class CloudTrailFetcherInput(BaseModel):
                                                    description="Role name to assume in customer account")
     external_id: Optional[str] = Field(default=None,
                                        description="External ID for cross-account role assumption (optional)")
+    protected_users: Optional[list] = Field(default=None,
+                                           description="List of usernames to protect from deletion when action='cleanup_users' (default: ['DeploymentUser', 'Hackathon', 'pro_user', 'pro_max_user'])")
 
 
 class CloudTrailEventsFetcher(BaseTool):
     name: str = "CloudTrail Events Fetcher"
     description: str = (
-        "REQUIRED FIRST STEP for AWS IAM optimization tasks. This tool fetches comprehensive CloudTrail events "
+        "Multi-purpose tool for AWS IAM management. Supports two actions: "
+        "1. 'fetch_events' (default): REQUIRED FIRST STEP for AWS IAM optimization tasks. Fetches comprehensive CloudTrail events "
         "for ALL AWS IAM users in a customer account by assuming a cross-account role. "
         "Use this BEFORE any IAM role creation or permission analysis. "
         "Returns detailed activity data needed for creating least-privilege custom roles. "
-        "Essential for understanding what permissions users actually need based on their activity history."
+        "2. 'cleanup_users': Deletes temporary IAM users after policy verification, while protecting specified users "
+        "(DeploymentUser, Hackathon, pro_user, pro_max_user by default). Use this AFTER successful policy creation and verification "
+        "to clean up the customer account."
     )
     args_schema: Type[BaseModel] = CloudTrailFetcherInput
 
@@ -216,12 +223,19 @@ class CloudTrailEventsFetcher(BaseTool):
                         users_data.append({
                             "username": uname,
                             "events": [],
-                            "error": user_events_result["error"]
+                            "error": user_events_result["error"],
+                            "has_activity": False,
+                            "should_skip_role_creation": True,
+                            "skip_reason": "Error fetching CloudTrail events"
                         })
                     else:
+                        has_events = len(user_events_result["events"]) > 0
                         users_data.append({
                             "username": uname,
-                            "events": user_events_result["events"]
+                            "events": user_events_result["events"],
+                            "has_activity": has_events,
+                            "should_skip_role_creation": not has_events,
+                            "skip_reason": "No CloudTrail events found - cannot determine required permissions" if not has_events else None
                         })
                         total_events += len(user_events_result["events"])
                 except Exception as exc:
@@ -229,13 +243,19 @@ class CloudTrailEventsFetcher(BaseTool):
                     users_data.append({
                         "username": username,
                         "events": [],
-                        "error": str(exc)
+                        "error": str(exc),
+                        "has_activity": False,
+                        "should_skip_role_creation": True,
+                        "skip_reason": f"Exception occurred: {str(exc)}"
                     })
 
         return users_data, errors, total_events
 
-    def _delete_iam_users(self, usernames, session=None):
-        """Delete IAM users in AWS. Returns a list of results for each user."""
+    def _delete_iam_users(self, usernames, session=None, protected_users=None):
+        """Delete IAM users in AWS, excluding protected users. Returns a list of results for each user."""
+        if protected_users is None:
+            protected_users = ["DeploymentUser", "Hackathon", "pro_user", "pro_max_user"]
+        
         if session:
             iam_client = session.client('iam', region_name='us-east-1')
         else:
@@ -243,24 +263,122 @@ class CloudTrailEventsFetcher(BaseTool):
 
         results = []
         for username in usernames:
+            # Skip protected users
+            if username in protected_users:
+                results.append({
+                    "username": username,
+                    "status": "skipped",
+                    "reason": "User is in protected list"
+                })
+                print(f"Skipping protected user: {username}")
+                continue
+            
             try:
                 iam_client.delete_user(UserName=username)
                 results.append({
                     "username": username,
                     "status": "deleted"
                 })
+                print(f"Successfully deleted user: {username}")
             except ClientError as e:
                 results.append({
                     "username": username,
                     "status": "error",
                     "error": str(e)
                 })
+                print(f"Error deleting user {username}: {str(e)}")
         return results
 
-    def _run(self, specific_user: str = None, customer_account_id: str = None,
+    def cleanup_iam_users(self, customer_account_id: str = None,
+                         cross_account_role_name: str = "CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923",
+                         external_id: str = None, protected_users: list = None) -> str:
+        """
+        Delete IAM users from AWS account, excluding protected users.
+        
+        Args:
+            customer_account_id: Optional customer AWS account ID for cross-account operations
+            cross_account_role_name: Role name to assume in customer account
+            external_id: Optional external ID for cross-account role assumption
+            protected_users: List of usernames to protect from deletion (default: ["DeploymentUser", "Hackathon", "pro_user", "pro_max_user"])
+        
+        Returns:
+            JSON string with cleanup results
+        """
+        try:
+            if protected_users is None:
+                protected_users = ["DeploymentUser", "Hackathon", "pro_user", "pro_max_user"]
+            
+            session = None
+            
+            # Assume cross-account role if customer_account_id is provided
+            if customer_account_id:
+                assume_role_result = self._assume_cross_account_role(customer_account_id, cross_account_role_name,
+                                                                     external_id)
+                if assume_role_result["error"]:
+                    return json.dumps({
+                        "success": False,
+                        "error": assume_role_result["error"],
+                        "cleanup_results": []
+                    }, indent=2)
+                else:
+                    session = assume_role_result["session"]
+            
+            # Get all IAM users
+            users_result = self._get_all_iam_users(session)
+            
+            if users_result["error"]:
+                return json.dumps({
+                    "success": False,
+                    "error": users_result["error"],
+                    "cleanup_results": []
+                }, indent=2)
+            
+            # Extract usernames
+            usernames = [user.get("UserName") for user in users_result["users"]]
+            
+            # Delete users (protected users will be skipped)
+            cleanup_results = self._delete_iam_users(usernames, session=session, protected_users=protected_users)
+            
+            # Summarize results
+            deleted_count = sum(1 for r in cleanup_results if r["status"] == "deleted")
+            skipped_count = sum(1 for r in cleanup_results if r["status"] == "skipped")
+            error_count = sum(1 for r in cleanup_results if r["status"] == "error")
+            
+            return json.dumps({
+                "success": True,
+                "summary": {
+                    "total_users_processed": len(cleanup_results),
+                    "users_deleted": deleted_count,
+                    "users_skipped": skipped_count,
+                    "errors": error_count,
+                    "protected_users": protected_users
+                },
+                "cleanup_results": cleanup_results,
+                "account_id": customer_account_id if customer_account_id else "default"
+            }, indent=2)
+            
+        except Exception as e:
+            return json.dumps({
+                "success": False,
+                "error": f"Unexpected error during IAM user cleanup: {str(e)}",
+                "cleanup_results": []
+            }, indent=2)
+
+    def _run(self, action: str = "fetch_events", specific_user: str = None, customer_account_id: str = None,
              cross_account_role_name: str = "CyberArkRoleSCA-3436d390-d01e-11f0-91ee-0e1617ad5923",
-             external_id: str = None) -> str:
-        """Execute the CloudTrail events fetching logic and return JSON."""
+             external_id: str = None, protected_users: list = None) -> str:
+        """Execute the specified action and return JSON."""
+        
+        # Handle cleanup_users action
+        if action == "cleanup_users":
+            return self.cleanup_iam_users(
+                customer_account_id=customer_account_id,
+                cross_account_role_name=cross_account_role_name,
+                external_id=external_id,
+                protected_users=protected_users
+            )
+        
+        # Default action: fetch_events
         try:
             # Set time range for CloudTrail events (fixed to 1 day)
             hours_back = 12  # 1 hour
@@ -270,9 +388,13 @@ class CloudTrailEventsFetcher(BaseTool):
             result = {
                 "analysis_instruction": (
                     "CloudTrail data collected successfully. Next steps: "
-                    "1. Analyze the events data below to understand user activity patterns. "
-                    "2. Identify minimum required permissions for each user. "
-                    "3. Use AWS IAM MCP server tools to create optimized custom roles based on this analysis."
+                    "1. **CRITICAL**: Check the 'should_skip_role_creation' flag for each user. "
+                    "   DO NOT create IAM roles, identity users, or policies for users with should_skip_role_creation=True. "
+                    "   Only process users with has_activity=True and should_skip_role_creation=False. "
+                    "2. Analyze the events data for ACTIVE users to understand their activity patterns. "
+                    "3. Identify minimum required permissions for each ACTIVE user. "
+                    "4. Use AWS IAM MCP server tools to create optimized custom roles ONLY for ACTIVE users. "
+                    "5. Skip any user listed in 'users_to_skip' - they have no CloudTrail activity data."
                 ),
                 "summary": {
                     "query_time": datetime.now().isoformat(),
@@ -333,9 +455,16 @@ class CloudTrailEventsFetcher(BaseTool):
                     iam_users, start_time, end_time, session
                 )
 
+                # Calculate statistics about users with/without activity
+                users_with_activity = [u for u in users_data if u.get("has_activity", False)]
+                users_without_activity = [u for u in users_data if u.get("should_skip_role_creation", False)]
+
                 result["users_data"] = users_data
                 result["errors"].extend(parallel_errors)
                 result["summary"]["total_events_found"] = total_events
+                result["summary"]["users_with_activity"] = len(users_with_activity)
+                result["summary"]["users_without_activity"] = len(users_without_activity)
+                result["summary"]["users_to_skip"] = [u["username"] for u in users_without_activity]
 
             return json.dumps(result, indent=2)
 

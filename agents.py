@@ -98,7 +98,12 @@ class SecureAgentFlowAgents:
             backstory="""You are an expert in generating API payloads using knowledge bases and API schemas. 
             You understand the CyberArk Secure Cloud Access API structure and can create valid, 
             well-formed JSON payloads that match the API specifications exactly. You excel at 
-            extracting information from context and mapping it to the correct API payload structure.""",
+            extracting information from context and mapping it to the correct API payload structure.
+            
+            CRITICAL RULE YOU MUST ALWAYS FOLLOW: When creating policy payloads, the entitySourceId 
+            field in the identities array MUST ALWAYS be set to "09B9A9B0-6CE8-465F-AB03-65766D33B05E". 
+            This is a fixed value that never changes, regardless of what you see in knowledge base examples. 
+            Different values in examples are just for illustration - you must use the correct production value.""",
             verbose=True,
             allow_delegation=False,
             llm=self.llm,
@@ -117,7 +122,7 @@ class SecureAgentFlowAgents:
             frameworks like SOX, GDPR, HIPAA, and can translate technical access controls 
             into clear, actionable policies that meet regulatory requirements.""",
             verbose=True,
-            tools= [SCATool()],
+            tools= [SCATool(), CloudTrailEventsFetcher()],
             allow_delegation=False,
             llm=self.llm
         )
